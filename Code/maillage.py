@@ -19,7 +19,7 @@ class MaillageDelaunayMultiDimension:
         # Génération des valeurs de sortie (dimension output_dim) pour chaque sommet
         self.values_at_vertices = np.random.rand(num_points, output_dim)
 
-    def evaluate_function_at_point(self, point):
+    def evaluate_function_at_point(self, point, text_disp = False):
         """
         Évalue la fonction interpolée en un point donné.
 
@@ -29,6 +29,7 @@ class MaillageDelaunayMultiDimension:
                    interpolée de la fonction en ce point, ou None si en dehors du maillage.
                    - rien si le point est hors du maillage 
         """
+
         simplex = self.regions.find_simplex(point)
 
         if simplex != -1:  # Vérifier que le point est dans le maillage
@@ -43,24 +44,35 @@ class MaillageDelaunayMultiDimension:
 
             # Interpolation de la valeur de sortie pour chaque dimension de output_dim
             result = np.dot(bary_coords, values)
-            print("Valeur de la fonction au point", point, ":", result)
+
+            if text_disp: 
+                print("Valeur de la fonction au point", point, ":", result)
+
             return result
         else:
             print("Le point est en dehors du maillage.")
+
             return None
 
-    def plot(self):
+    def plot(self, ax=None):
+
         """
         Affiche le maillage Delaunay et une des dimensions de la fonction interpolée en 3D,
         si la dimension d'entrée est de 2 et la dimension de sortie est de 3.
+
+        ax : valeur d'ax (type :'mpl_toolkits.mplot3d.axes3d.Axes3D')
+
+        retourne : None
         """
-        if self.input_dim >= 2 or self.output_dim != 1:
+
+        if self.input_dim > 2 or self.output_dim != 1:
             print("La visualisation 3D est uniquement possible pour un maillage en entrée 2D "
                   "et des valeurs de sortie 3D !")
             
         else : 
-            fig = plt.figure(figsize=(10, 8))
-            ax = fig.add_subplot(111, projection="3d")
+            if ax == None:
+                fig = plt.figure(figsize=(10, 8))
+                ax = fig.add_subplot(111, projection='3d')
 
             # Création d'une collection de triangles pour la surface 3D en utilisant la 3e dimension des valeurs
             for simplex in self.regions.simplices:
@@ -71,14 +83,37 @@ class MaillageDelaunayMultiDimension:
                 poly = Poly3DCollection([reg_vertices], color=plt.cm.viridis(color_value), edgecolor="k", alpha=0.7)
                 ax.add_collection3d(poly)
 
-            # Paramètres des axes
-            ax.set_xlabel("X")
-            ax.set_ylabel("Y")
-            ax.set_zlabel("Valeur de la fonction (3ème dimension de sortie)")
-            ax.set_title("Visualisation 3D de la fonction interpolée sur le maillage")
-
             # Échelle de couleurs
             plt.colorbar(plt.cm.ScalarMappable(cmap="viridis"), ax=ax, label="Valeur de la fonction", shrink=0.5, pad=0.1)
-            plt.show()
 
         return None
+    
+    def generate_points_region(self, n=1):
+        """
+        Génère un nombre spécifié de points aléatoires dans chaque région (simplexe).
+
+        num_points_per_region : nombre de points à générer dans chaque région.
+
+        Retourne : Deux arrays, l'un avec les coordonnées, l'autre avec la valeur en ce point.
+        """
+
+        points_in_regions = []
+        values_in_regions = []
+
+        for simplex_index, simplex in enumerate(self.regions.simplices):
+            vertices = self.points[simplex]
+
+            for _ in range(n):
+                # Générer des coordonnées barycentriques aléatoires qui somment à 1
+                bary_coords = np.random.rand(len(vertices))
+                bary_coords /= bary_coords.sum()  # Normalisation
+                
+                # Calculer le point dans l'espace en utilisant les coordonnées barycentriques
+                random_point = np.dot(bary_coords, vertices)
+
+                point_value = self.evaluate_function_at_point(random_point)
+
+                points_in_regions.append(random_point)
+                values_in_regions.append(point_value)
+
+        return np.array(points_in_regions), np.array(values_in_regions)
