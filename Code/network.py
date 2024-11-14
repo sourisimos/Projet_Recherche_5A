@@ -109,7 +109,7 @@ class ReLUNetwork:
             ax = fig.add_subplot(111, projection='3d')
 
         # Afficher la surface en 3D avec les valeurs de sortie
-        ax.plot_surface(X, Y, Z, cmap="viridis", edgecolor='k', alpha=0.8)
+        ax.plot_surface(X, Y, Z, cmap="viridis", edgecolor='k', alpha=0.7)
 
         return None
 
