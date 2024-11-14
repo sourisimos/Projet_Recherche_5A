@@ -3,8 +3,10 @@ from scipy.spatial import Delaunay
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
+from tools import generate_hypercube_vertices
+
 class MaillageDelaunayMultiDimension:
-    def __init__(self, num_points=100, input_dim=2, output_dim=1):
+    def __init__(self, num_points=100, input_dim=2, output_dim=1, generate_cube = True):
         """
         Initialise un maillage Delaunay dans un espace de dimension arbitraire.
 
@@ -14,10 +16,20 @@ class MaillageDelaunayMultiDimension:
         """
         self.input_dim = input_dim
         self.output_dim = output_dim
-        self.points = np.random.rand(num_points, input_dim)
+
+        # Generating points
+        centered_points = np.random.rand(num_points, input_dim)
+
+        if generate_cube : 
+            border = generate_hypercube_vertices(input_dim)
+        self.points = np.concatenate((centered_points, border), axis=0) if generate_cube else centered_points
+    
+        # Generating regions
         self.regions = Delaunay(self.points)
+
         # Génération des valeurs de sortie (dimension output_dim) pour chaque sommet
-        self.values_at_vertices = np.random.rand(num_points, output_dim)
+        tot_num_points = num_points + 2**(input_dim)
+        self.values_at_vertices = np.random.rand(tot_num_points, output_dim)
 
     def evaluate_function_at_point(self, point, text_disp = False):
         """
