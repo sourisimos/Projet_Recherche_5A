@@ -23,6 +23,8 @@ grid_size = 100 #Finessse de la grille lors de l'affichage des zones affines pou
 
 generate_cube = True
 
+follow_regions = False # Only display delaunay region if set to True
+
 
 
 def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees, largeur_couche, epochs, grid_size):
@@ -45,7 +47,7 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
         ax = fig.add_subplot(111, projection='3d')
         regions = mesh.regions
 
-        model.find_affine_zones(regions, grid_size, ax)
+        model.find_affine_zones(regions, grid_size, ax, follow_regions)
         mesh.plot(ax)
 
         ax.set_xlabel("X")
@@ -67,6 +69,7 @@ if __name__ == "__main__":
     parser.add_argument("--largeur_couche", type=int, default=largeur_couche, help="Nombre de neurones par couche cachée")
     parser.add_argument("--epochs", type=int, default=epochs, help="Nombre d'époques pour l'entraînement du réseau")
     parser.add_argument("--grid_size", type=int, default=grid_size, help="Finesse de la grille lors de l'affichage")
+    parser.add_argument("--follow_regions", type=bool, default=follow_regions, help="Affichage uniquement de la region de Delaunay")
 
     # Analyse des arguments
     args = parser.parse_args()

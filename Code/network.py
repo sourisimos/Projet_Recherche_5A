@@ -73,7 +73,7 @@ class ReLUNetwork:
 
         return prediction[0]
 
-    def find_affine_zones(self, delaunay_regions, grid_size=50, ax=None):
+    def find_affine_zones(self, delaunay_regions, grid_size=50, ax=None, follow_regions=False):
         """
         Génère les zones affines apprises par le réseaux à partir d'un grillage
 
@@ -89,20 +89,23 @@ class ReLUNetwork:
         y = np.linspace(0, 1, grid_size)
         X, Y = np.meshgrid(x, y)
         grid_points = np.c_[X.ravel(), Y.ravel()]
-
+        if follow_regions:
         # Vérifier si chaque point est dans une région de Delaunay
-        mask = np.array([delaunay_regions.find_simplex(point) != -1 for point in grid_points])
+            mask = np.array([delaunay_regions.find_simplex(point) != -1 for point in grid_points])
 
         # Préparer un tableau Z de même forme que X et Y, initialisé avec None pour les points hors des régions
-        Z = np.full(X.shape, None, dtype=object)  # Utilisation d'un dtype object pour permettre `None`
+            Z = np.full(X.shape, None, dtype=object)  # Utilisation d'un dtype object pour permettre `None`
 
         # Faire des prédictions uniquement pour les points valides
-        valid_points = grid_points[mask]
-        valid_predictions = self.model.predict(valid_points)
+            valid_points = grid_points[mask]
+            valid_predictions = self.model.predict(valid_points)
 
         # Replacer les prédictions dans Z uniquement pour les points valides
-        Z[mask.reshape(X.shape)] = valid_predictions.flatten()
+            Z[mask.reshape(X.shape)] = valid_predictions.flatten()
 
+        else : 
+            Z = self.model.predict(grid_points)
+            Z = Z.reshape(grid_size, grid_size)
         # Initialiser la figure et les axes si aucun axe n'est fourni
         if ax is None:
             fig = plt.figure(figsize=(10, 8))
