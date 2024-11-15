@@ -30,6 +30,7 @@ follow_regions = False # Only display delaunay region if set to True
 def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees, largeur_couche, epochs, grid_size):
     # Initialistation
     mesh = MaillageDelaunayMultiDimension(point_delaunay, input_dim, output_dim, generate_cube)
+    print("Il y a %i zones affines" % len(mesh.regions.simplices))
     model = ReLUNetwork(input_dim=input_dim, output_dim=output_dim, hidden_layers=nb_couches_cachees, layer_width=largeur_couche)
 
     X_train, Y_train = mesh.generate_points_region(nb_pt_region)
