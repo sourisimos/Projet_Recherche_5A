@@ -16,7 +16,7 @@ point_delaunay = 10 # Nb de point à partir duquel on génère la fonction affin
 nb_pt_region = 10 # Nombre de point tirés par régions dans la fonction affine intiale
 
 nb_couches_cachees = 15 # Nb de couches cachées dans le réseau
-largeur_couche = 50 # Nb de neurones par couche cachée
+largeur_couche = 150 # Nb de neurones par couche cachée
 
 epochs = 100 # Nb d'époques pour l'entraînement du réseau
 
@@ -58,12 +58,36 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
         model.find_affine_zones(regions,grid_size, fig, follow_regions)
         mesh.plot(fig)
 
+        params_text = (f"Input Dimension: {input_dim}   "
+                       f"Output Dimension: {output_dim}   "
+                       f"Points Delaunay: {point_delaunay}<br>"
+                       f"Points per Region: {nb_pt_region}   "
+                       f"Hidden Layers: {nb_couches_cachees}   "
+                       f"Layer Width: {largeur_couche}<br>"
+                       f"Epochs: {epochs}   "
+                       f"Grid Size: {grid_size}   "
+                       f"Generate Cube: {generate_cube}   "
+                       f"Follow Regions: {follow_regions}"
+                       )
+
+        fig.add_annotation(x=1,  
+                           y=0,
+                           text=params_text,
+                           showarrow=False,
+                           font=dict(size=12, color="black"),
+                           align="left",
+                           bgcolor="rgba(255, 255, 255, 0.8)",
+                           bordercolor="black",
+                           xref="paper",  # Référence à l'espace papier
+                           yref="paper"
+                           )
+
         fig.update_layout(title="Zones Affines et Valeurs de Sortie du Réseau de Neurones ReLU en 3D",
                           scene=dict(xaxis_title="X",
                                      yaxis_title="Y",
                                      zaxis_title="Valeur de sortie (Z)",
-)
-)
+                                     )   
+                        )
 
         fig.show()
 
