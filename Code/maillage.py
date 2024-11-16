@@ -33,7 +33,6 @@ class MaillageDelaunayMultiDimension:
         self.regions = Delaunay(self.points)
 
         # Génération des valeurs de sortie (dimension output_dim) pour chaque sommet
-        tot_num_points = num_points + 2**(input_dim)
         self.values_at_vertices = np.random.rand(tot_num_points, output_dim)
 
     def evaluate_function_at_point(self, point, text_disp = False):

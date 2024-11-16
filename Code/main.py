@@ -9,20 +9,20 @@ Le programme peut être exécuté en ligne de commande en entrant les différent
 """
 
 # Metadata:
-input_dim = 2 # DImension de l'entré
+input_dim = 2 # Dimension de l'entré
 output_dim = 1 # Dimension de la sortie
 
 point_delaunay = 10 # Nb de point à partir duquel on génère la fonction affine intiale 
-nb_pt_region = 10 # Nombre de point tirés par régions dans la fonction affine intiale
+nb_pt_region = 150 # Nombre de point tirés par régions dans la fonction affine intiale
 
-nb_couches_cachees = 15 # Nb de couches cachées dans le réseau
-largeur_couche = 150 # Nb de neurones par couche cachée
+nb_couches_cachees = 10 # Nb de couches cachées dans le réseau
+largeur_couche = 10 # Nb de neurones par couche cachée
 
 epochs = 100 # Nb d'époques pour l'entraînement du réseau
 
 grid_size = 100 #Finessse de la grille lors de l'affichage des zones affines pour le reseau 
 
-generate_cube = True
+generate_cube = True # force à générer tout le cube 01 
 
 follow_regions = False # Only display delaunay region if set to True
 
@@ -55,7 +55,7 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
         fig = go.Figure()
         regions = mesh.regions
 
-        model.find_affine_zones(regions,grid_size, fig, follow_regions)
+        model.plot_affine_zones(regions,grid_size, fig, follow_regions)
         mesh.plot(fig)
 
         params_text = (f"Input Dimension: {input_dim}   "
