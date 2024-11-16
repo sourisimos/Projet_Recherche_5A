@@ -1,7 +1,7 @@
 import numpy as np
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-import matplotlib.pyplot as plt
+from tensorflow.keras.models import Sequential # type: ignore
+from tensorflow.keras.layers import Dense # type: ignore
+import plotly.graph_objects as go
 
 class ReLUNetwork:
     def __init__(self, input_dim=2, output_dim=1, hidden_layers=10, layer_width=50):
@@ -73,7 +73,7 @@ class ReLUNetwork:
 
         return prediction[0]
 
-    def find_affine_zones(self, delaunay_regions, grid_size=50, ax=None, follow_regions=False):
+    def find_affine_zones(self, delaunay_regions, grid_size=50, fig=None, follow_regions=False):
         """
         Génère les zones affines apprises par le réseaux à partir d'un grillage
 
@@ -107,12 +107,24 @@ class ReLUNetwork:
             Z = self.model.predict(grid_points)
             Z = Z.reshape(grid_size, grid_size)
         # Initialiser la figure et les axes si aucun axe n'est fourni
-        if ax is None:
-            fig = plt.figure(figsize=(10, 8))
-            ax = fig.add_subplot(111, projection='3d')
+        if fig is None:
+            fig = go.Figure()
 
         # Afficher la surface en 3D avec les valeurs de sortie
-        ax.plot_surface(X, Y, Z, cmap="viridis", edgecolor='k', alpha=0.7)
+        fig.add_trace(go.Surface(z=Z,
+                                 x=X,
+                                 y=Y,
+                                 colorscale="Viridis",
+                                 name="Réseau",
+                                 opacity=1,
+                                 colorbar=dict(title="Z<br>(Réseau)",
+                                               len=0.6,     # Même taille que la première barre
+                                               x=0.9,       # Position à droite
+                                               xpad=40,     # Décalage de la barre
+                                               orientation="v"  # Orientation verticale
+                                               )
+                                )
+                    )
 
         return None
 

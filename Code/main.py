@@ -1,7 +1,8 @@
 import argparse
 from maillage import MaillageDelaunayMultiDimension
 from network import ReLUNetwork
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+
 
 """
 Le programme peut être exécuté en ligne de commande en entrant les différentes valeurs, ou en changeant les metadatas et executant sans options. 
@@ -44,18 +45,20 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
 
     # Affichage si 3D
     if input_dim == 2 and output_dim == 1: 
-        fig = plt.figure(figsize=(10, 8))
-        ax = fig.add_subplot(111, projection='3d')
+        fig = go.Figure()
         regions = mesh.regions
 
-        model.find_affine_zones(regions, grid_size, ax, follow_regions)
-        mesh.plot(ax)
+        model.find_affine_zones(regions, grid_size, fig, follow_regions)
+        mesh.plot(fig)
 
-        ax.set_xlabel("X")
-        ax.set_ylabel("Y")
-        ax.set_zlabel("Valeur de sortie (z)")
-        ax.set_title("Zones Affines et Valeurs de Sortie du Réseau de Neurones ReLU en 3D")
-        plt.show()
+        fig.update_layout(title="Zones Affines et Valeurs de Sortie du Réseau de Neurones ReLU en 3D",
+                          scene=dict(xaxis_title="X",
+                                     yaxis_title="Y",
+                                     zaxis_title="Valeur de sortie (Z)",
+)
+)
+
+        fig.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script de génération de maillage et d'entraînement de réseau ReLU")

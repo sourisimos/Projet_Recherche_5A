@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.spatial import Delaunay
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from tools import generate_hypercube_vertices
@@ -66,40 +66,67 @@ class MaillageDelaunayMultiDimension:
 
             return None
 
-    def plot(self, ax=None):
-
+    def plot(self, fig=None):
         """
         Affiche le maillage Delaunay et une des dimensions de la fonction interpolée en 3D,
-        si la dimension d'entrée est de 2 et la dimension de sortie est de 3.
+        si la dimension d'entrée est de 2 et la dimension de sortie est de 1.
 
-        ax : valeur d'ax (type :'mpl_toolkits.mplot3d.axes3d.Axes3D')
+        fig : Figure Plotly à enrichir (par défaut, crée une nouvelle figure)
 
         retourne : None
         """
 
         if self.input_dim > 2 or self.output_dim != 1:
             print("La visualisation 3D est uniquement possible pour un maillage en entrée 2D "
-                  "et des valeurs de sortie 3D !")
-            
-        else : 
-            if ax == None:
-                fig = plt.figure(figsize=(10, 8))
-                ax = fig.add_subplot(111, projection='3d')
+                  "et des valeurs de sortie 1D !")
+        else:
+            if fig is None:
+                fig = go.Figure()
 
-            # Création d'une collection de triangles pour la surface 3D en utilisant la 3e dimension des valeurs
-            for simplex in self.regions.simplices:
+            # Création des listes pour les coordonnées et indices
+            x, y, z = [], [], []
+            i, j, k = [], [], []  # Indices des triangles
+
+            for simplex_index, simplex in enumerate(self.regions.simplices):
                 vertices = self.points[simplex]
-                # Mapping chaque sommet à sa coordonnée (x, y, z) interpolée
-                reg_vertices = [(vertices[i][0], vertices[i][1], self.values_at_vertices[simplex[i], 0]) for i in range(3)]
-                color_value = np.mean(self.values_at_vertices[simplex, 0])
-                poly = Poly3DCollection([reg_vertices], color=plt.cm.viridis(color_value), edgecolor="k", alpha=0.7)
-                ax.add_collection3d(poly)
+                # Extraction directe des coordonnées et indices
+                x = self.points[:, 0]
+                y = self.points[:, 1]
+                z = self.values_at_vertices[:, 0]
 
-            # Échelle de couleurs
-            plt.colorbar(plt.cm.ScalarMappable(cmap="viridis"), ax=ax, label="Valeur de la fonction", shrink=0.5, pad=0.1)
+                # Création des indices des triangles à partir des simplices
+                i, j, k = zip(*self.regions.simplices)
 
-        return None
-    
+
+            z_min, z_max = z.min(), z.max()
+            intensity = 1 - (z - z_min) / (z_max - z_min)  # Inversion de l'intensité
+
+            # Indices des triangles
+            i, j, k = zip(*self.regions.simplices)
+            # Tracer la surface avec Plotly
+            fig.add_trace(go.Mesh3d(
+                x=x,
+                y=y,
+                z=z,
+                i=i,
+                j=j,
+                k=k,
+                intensity=intensity, # intensité selon Z
+                colorscale="Plasma", # Colormap pour Z
+                opacity=0.4, # Opacité
+                showscale=True, # Ajouter une barre d'échelle
+                colorbar=dict( # mise en forme de la barre
+                    title="Z<br>(Maillage)",
+                    len=0.6,
+                    x=-0.03,
+                    xpad=40,
+                    orientation="v"
+                )
+            ))
+
+            return fig
+
+
     def generate_points_region(self, n=1):
         """
         Génère un nombre spécifié de points aléatoires dans chaque région (simplexe).
