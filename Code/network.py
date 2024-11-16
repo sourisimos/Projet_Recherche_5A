@@ -28,8 +28,12 @@ class ReLUNetwork:
 
         model = Sequential()
     
-        for _ in range(self.hidden_layers):
-            model.add(Dense(self.layer_width, activation='relu', input_dim=self.input_dim))
+        for i in range(self.hidden_layers):
+            if i == 0:
+                # Spécifier input_dim uniquement pour la première couche
+                model.add(tfk.layers.Dense(self.layer_width, activation='relu', input_dim=self.input_dim))
+            else:
+                model.add(tfk.layers.Dense(self.layer_width, activation='relu'))
 
         model.add(Dense(self.output_dim))  # Sortie sans activation pour valeurs continues
 
