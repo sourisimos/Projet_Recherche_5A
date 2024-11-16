@@ -83,27 +83,19 @@ class MaillageDelaunayMultiDimension:
             if fig is None:
                 fig = go.Figure()
 
-            # Création des listes pour les coordonnées et indices
-            x, y, z = [], [], []
-            i, j, k = [], [], []  # Indices des triangles
+            # Extraction des coordonnées des trgl
+            x = self.points[:, 0]
+            y = self.points[:, 1]
+            z = self.values_at_vertices[:, 0]
 
-            for simplex_index, simplex in enumerate(self.regions.simplices):
-                vertices = self.points[simplex]
-                # Extraction directe des coordonnées et indices
-                x = self.points[:, 0]
-                y = self.points[:, 1]
-                z = self.values_at_vertices[:, 0]
-
-                # Création des indices des triangles à partir des simplices
-                i, j, k = zip(*self.regions.simplices)
+            # Extraction des indices des trgl
+            i, j, k = zip(*self.regions.simplices)
 
 
             z_min, z_max = z.min(), z.max()
-            intensity = 1 - (z - z_min) / (z_max - z_min)  # Inversion de l'intensité
+            intensity = 1 - (z - z_min) / (z_max - z_min)  # Entensité avec 0 et 1 comme optimum
 
-            # Indices des triangles
-            i, j, k = zip(*self.regions.simplices)
-            # Tracer la surface avec Plotly
+            # Tracé
             fig.add_trace(go.Mesh3d(
                 x=x,
                 y=y,
