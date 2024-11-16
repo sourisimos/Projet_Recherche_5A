@@ -1,6 +1,5 @@
 import numpy as np
-from tensorflow.keras.models import Sequential # type: ignore
-from tensorflow.keras.layers import Dense # type: ignore
+import tensorflow.keras as tfk # type: ignore
 import plotly.graph_objects as go
 
 class ReLUNetwork:
@@ -26,8 +25,8 @@ class ReLUNetwork:
         retourne : le model en configuration initial (objet TF)
         """
 
-        model = Sequential()
-    
+        model = tfk.models.Sequential()
+            
         for i in range(self.hidden_layers):
             if i == 0:
                 # Spécifier input_dim uniquement pour la première couche
@@ -35,7 +34,7 @@ class ReLUNetwork:
             else:
                 model.add(tfk.layers.Dense(self.layer_width, activation='relu'))
 
-        model.add(Dense(self.output_dim))  # Sortie sans activation pour valeurs continues
+        model.add(tfk.layers.Dense(self.output_dim))  # Sortie sans activation pour valeurs continues
 
         model.compile(optimizer='adam', loss='mse')
 
@@ -77,7 +76,7 @@ class ReLUNetwork:
 
         return prediction[0]
 
-    def find_affine_zones(self, delaunay_regions, grid_size=50, fig=None, follow_regions=False):
+    def plot_affine_zones(self, delaunay_regions, grid_size=50, fig=None, follow_regions=False):
         """
         Génère les zones affines apprises par le réseaux à partir d'un grillage
 
@@ -132,3 +131,74 @@ class ReLUNetwork:
 
         return None
 
+    def find_affine_zone(self, points):
+        """
+        Identifie les zones affines à partir des points d'entrée et retourne leurs caractéristiques.
+
+        points : np.array de taille (nb_points, input_dim) - Points d'entrée à analyser.
+
+        Retourne :
+            zones_affines : dict où les clés sont les patrons d'activations (tuple)
+                            et les valeurs contiennent les points et matrices affines associées.
+        """
+
+        # Capturer les activations intermédiaires
+        intermediate_model = tfk.Model(
+            inputs=self.model.input,
+            outputs=[layer.output for layer in self.model.layers]
+        )
+
+        # Initialisation des zones affines
+        zones_affines = {}
+
+        for point in points:
+            point = point.reshape(1, -1)  # Reformater en (1, input_dim)
+            activations = intermediate_model(point)  # Obtenir les activations
+            pattern = []
+
+            # Construire le patron d'activations binaire
+            for activation in activations:  # Ignorer la dernière couche
+                pattern.append((activation.numpy() > 0).astype(int).flatten().tolist())
+            pattern = tuple(map(tuple, pattern))  # Convertir en une clé immuable (tuple)
+
+            if pattern not in zones_affines:
+                zones_affines[pattern] = {"points": [], "matrix": None}
+
+            zones_affines[pattern]["points"].append(point.flatten())
+
+        # Calculer les matrices affines pour chaque zone
+        weights_biases = [layer.get_weights() for layer in self.model.layers]
+
+        for pattern, _ in zones_affines.items():
+
+            W_combined = np.array(weights_biases[0][0] * np.array(pattern[0])).T # Cracra mais je n'ai pas eu le choix ??? A résoudre proprement
+            b_combined = np.array(weights_biases[0][1] * np.array(pattern[0])).T
+            
+            for i, (u, b) in enumerate(weights_biases[1:], start= 1): # i = 0 fait hors de la boucle
+
+                print(i,"---------------------")
+
+                active_neurons = np.array(pattern[i])  # Neurones activés pour cette couche +1 car intialisation 0 avant 
+                print("active_neurone",active_neurons)
+                # Récupérer les poids et biais des neurones activés uniquement
+                W_active = (u * active_neurons).T
+                b_active = (b * active_neurons).T
+                # Assurez-vous que b_active est correctement dimensionné avant addition
+
+                W_combined = np.dot(W_active, W_combined)
+                b_combined = np.dot(W_active, b_combined) + b_active
+
+                print("W_combined",W_combined.shape)
+                print("b_combined",b_combined.shape)
+                print("b_active", b_active.shape)
+
+            # Enregistrer la matrice affine dans la zone correspondante
+            zones_affines[pattern]["matrix"] = (W_combined, b_combined)
+
+            print("Vérification:")
+            for _, data in (zones_affines.items()):
+                for point in data['points']:
+                    rzo_pt = self.evaluate_point(point)
+                    aff_pt = np.dot(data['matrix'][0], point) + data['matrix'][1]
+                    print("diff",rzo_pt-aff_pt)
+        return zones_affines
