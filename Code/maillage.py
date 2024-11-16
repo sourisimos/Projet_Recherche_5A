@@ -19,11 +19,16 @@ class MaillageDelaunayMultiDimension:
 
         # Generating points
         centered_points = np.random.rand(num_points, input_dim)
-
+        
         if generate_cube : 
             border = generate_hypercube_vertices(input_dim)
-        self.points = np.concatenate((centered_points, border), axis=0) if generate_cube else centered_points
-    
+            self.points = np.concatenate((centered_points, border), axis=0)
+            tot_num_points = num_points + 2**(input_dim)
+
+        else:
+            self.points = centered_points
+            tot_num_points = num_points
+
         # Generating regions
         self.regions = Delaunay(self.points)
 
