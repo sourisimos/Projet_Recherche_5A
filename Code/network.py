@@ -142,24 +142,28 @@ class ReLUNetwork:
                             et les valeurs contiennent les points et matrices affines associées.
         """
 
-        # Capturer les activations intermédiaires
-        intermediate_model = tfk.Model(
-            inputs=self.model.input,
-            outputs=[layer.output for layer in self.model.layers]
-        )
+        # Capturer des activations intermédiaires
+        layer_outputs = [layer.output for layer in self.model.layers]
 
-        # Initialisation des zones affines
+        # Créer une fonction pour capturer les activations 
+        activation_function = tfk.backend.function([self.model.input], layer_outputs)
+
+        
+        # Initialisation des dictionnaires
         zones_affines = {}
+        constraints = {}
 
+
+        # Récupération des zones d'activation par points
         for point in points:
             point = point.reshape(1, -1)  # Reformater en (1, input_dim)
-            activations = intermediate_model(point)  # Obtenir les activations
+            activations = activation_function([point.reshape(1, -1)])
             pattern = []
 
             # Construire le patron d'activations binaire
-            for activation in activations:  # Ignorer la dernière couche
-                pattern.append((activation.numpy() > 0).astype(int).flatten().tolist())
-            pattern = tuple(map(tuple, pattern))  # Convertir en une clé immuable (tuple)
+            for activation in activations: 
+                pattern.append((activation  != 0.).astype(int).flatten()) 
+            pattern = tuple(map(tuple, pattern))  # Conversion de la liste en tuple pour être la clé du dict
 
             if pattern not in zones_affines:
                 zones_affines[pattern] = {"points": [], "matrix": None}
@@ -167,38 +171,108 @@ class ReLUNetwork:
             zones_affines[pattern]["points"].append(point.flatten())
 
         # Calculer les matrices affines pour chaque zone
+
         weights_biases = [layer.get_weights() for layer in self.model.layers]
+
 
         for pattern, _ in zones_affines.items():
 
+            zone_constraints = {"pos": [], "neg": []}  # Inégalité positive ou négative
+
             W_combined = np.array(weights_biases[0][0] * np.array(pattern[0])).T # Cracra mais je n'ai pas eu le choix ??? A résoudre proprement
             b_combined = np.array(weights_biases[0][1] * np.array(pattern[0])).T
-            
+
+            W_combined_act = np.array(weights_biases[0][0] * np.array(pattern[0])).T # Cracra mais je n'ai pas eu le choix ??? A résoudre proprement
+            b_combined_act = np.array(weights_biases[0][1] * np.array(pattern[0])).T
+
+            # Premiere étape de Zone_constraint séparée 
+            for neuron_idx, is_active in enumerate(np.array(pattern[0])):
+                W_neuron = W_combined[neuron_idx, :]  # Poids associés au neurone
+                b_neuron = b_combined[neuron_idx]    # Biais du neurone
+
+                if is_active:  # Neurone activé : W*x + b > 0
+                    zone_constraints["pos"].append((W_neuron, b_neuron))
+                else:          # Neurone désactivé : W*x + b <= 0
+                    zone_constraints["neg"].append((W_neuron, b_neuron))
+
+
+
             for i, (u, b) in enumerate(weights_biases[1:], start= 1): # i = 0 fait hors de la boucle
+                
+                active_neurons = np.array(pattern[i])  
+                
 
-                print(i,"---------------------")
+                # Détermination des zones de contraintes
 
-                active_neurons = np.array(pattern[i])  # Neurones activés pour cette couche +1 car intialisation 0 avant 
-                print("active_neurone",active_neurons)
+                if i != len(weights_biases)-1: # la dernière couche n'est pas calculé par un ReLu donc on ne la considère pas
+
+                    for neuron_idx, is_active in enumerate(active_neurons):
+
+                        # Récupérer les poids et biais du neurone
+                        W_neuron = u.T[neuron_idx, :]  # Poids associés au neurone
+                        b_neuron = b[neuron_idx]    # Biais du neurone
+
+                        # Transformer W_neuron et b_neuron dans l'espace d'entrée
+                        W_transformed = np.dot(W_neuron, W_combined)
+                        b_transformed = np.dot(W_neuron, b_combined) + b_neuron
+
+                        # Ajouter la contrainte dans l'espace d'entrée
+                        if is_active:  # Neurone activé : W*x + b > 0
+                            zone_constraints["pos"].append((W_transformed, b_transformed))
+                        else:          # Neurone désactivé : W*x + b <= 0
+                            zone_constraints["neg"].append((W_transformed, b_transformed))
+
+
                 # Récupérer les poids et biais des neurones activés uniquement
-                W_active = (u * active_neurons).T
+                W_active = (u * active_neurons).T # 
                 b_active = (b * active_neurons).T
-                # Assurez-vous que b_active est correctement dimensionné avant addition
 
-                W_combined = np.dot(W_active, W_combined)
-                b_combined = np.dot(W_active, b_combined) + b_active
+                # Poids utilisé pour le calcul de la fonciton affine
+                W_combined_act = np.dot(W_active, W_combined_act)
+                b_combined_act = np.dot(W_active, b_combined_act) + b_active
 
-                print("W_combined",W_combined.shape)
-                print("b_combined",b_combined.shape)
-                print("b_active", b_active.shape)
 
-            # Enregistrer la matrice affine dans la zone correspondante
-            zones_affines[pattern]["matrix"] = (W_combined, b_combined)
+                # Poids utilisés pour le calculs des zones de contrainte.
+                W_combined = np.dot(u.T, W_combined)
+                b_combined = np.dot(u.T, b_combined) + b
 
-            print("Vérification:")
-            for _, data in (zones_affines.items()):
-                for point in data['points']:
-                    rzo_pt = self.evaluate_point(point)
-                    aff_pt = np.dot(data['matrix'][0], point) + data['matrix'][1]
-                    print("diff",rzo_pt-aff_pt)
-        return zones_affines
+            # Enregistrer la matrice affine et la zone de contrainte 
+            zones_affines[pattern]["matrix"] = (W_combined_act, b_combined_act)
+
+
+            constraints[pattern] = zone_constraints
+
+        """
+        # Vérification de la fonction affine
+        print("Vérification:")
+        for _, data in (zones_affines.items()):
+            for point in data['points']:
+                rzo_pt = self.evaluate_point(point)
+                print('rzo_pt:',rzo_pt)
+                aff_pt = np.dot(data['matrix'][0], point) + data['matrix'][1] # W*x + b
+                print('aff_pt',aff_pt)
+                print("diff",rzo_pt-aff_pt)
+        
+
+        print(constraints)
+
+        # Vérification des zones affines
+        print('Vérification')
+        for pattern, data in (zones_affines.items()):
+            for point in data['points']:
+                print('-------------')
+                print("POS")
+                for w, b in constraints[pattern]['pos']: 
+                    bol = (np.dot(w, point) + b > 0)
+                    print(bol)
+                    if not bol : 
+                        print(np.dot(w, point) + b)
+                print("NEG")
+                for w, b in constraints[pattern]['neg']:
+                    bol = (np.dot(w, point) + b <= 0)
+                    print(bol)
+                    if not bol : 
+                        print(np.dot(w, point) + b)
+        """
+
+        return zones_affines, constraints
