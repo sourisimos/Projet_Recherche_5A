@@ -3,7 +3,7 @@ from maillage import MaillageDelaunayMultiDimension
 from network import ReLUNetwork
 import plotly.graph_objects as go
 from tools import plot_affine_zones_with_meshgrid_3D
-
+import numpy as np
 
 """
 Le programme peut être exécuté en ligne de commande en entrant les différentes valeurs, ou en changeant les metadatas et executant sans options. 
@@ -12,13 +12,13 @@ Le programme peut être exécuté en ligne de commande en entrant les différent
 
 # Metadata:
 input_dim = 2 # Dimension de l'entré
-output_dim = 1 # Dimension de la sortie
+output_dim = 1 # Dimension de la sorties
 
 point_delaunay = 10 # Nb de point à partir duquel on génère la fonction affine intiale 
-nb_pt_region = 10 # Nombre de point tirés par régions dans la fonction affine intiale
+nb_pt_region = 2# Nombre de point tirés par régions dans la fonction affine intiale
 
-nb_couches_cachees = 5 # Nb de couches cachées dans le réseau
-largeur_couche = 10 # Nb de neurones par couche cachée
+nb_couches_cachees = 2 # Nb de couches cachées dans le réseau
+largeur_couche = 5  # Nb de neurones par couche cachée
 
 epochs = 100 # Nb d'époques pour l'entraînement du réseau
 
@@ -28,6 +28,10 @@ generate_cube = True # force à générer tout le cube 01
 
 follow_regions = False # Only display delaunay region if set to True
 
+x = np.linspace(0, 1, 100)
+y = np.linspace(0, 1, 100)
+xx, yy = np.meshgrid(x, y)
+grid_points = np.c_[xx.ravel(), yy.ravel()]
 
 
 def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees, largeur_couche, epochs, grid_size):
@@ -50,7 +54,7 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
 
     point = [0.5] * input_dim
     print("Différence entre les deux réseaux pour", point, ':', mesh.evaluate_function_at_point(point) - model.evaluate_point(point))
-    zones_affines, constraints = model.find_affine_zone(X_train)
+    zones_affines, constraints = model.find_affine_zone(grid_points)
 
 
     # Affichage si 3D
@@ -59,7 +63,7 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
         regions = mesh.regions
 
         model.plot_affine_zones(regions,grid_size, fig, follow_regions)
-        mesh.plot(fig)
+        # mesh.plot(fig)
         plot_affine_zones_with_meshgrid_3D(fig, zones_affines, constraints)
 
         params_text = (f"Input Dimension: {input_dim}   "
