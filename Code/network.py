@@ -131,16 +131,12 @@ class ReLUNetwork:
 
         return None
 
+
+
+
+
     def find_affine_zone(self, points):
-        """
-        Identifie les zones affines à partir des points d'entrée et retourne leurs caractéristiques.
 
-        points : np.array de taille (nb_points, input_dim) - Points d'entrée à analyser.
-
-        Retourne :
-            zones_affines : dict où les clés sont les patrons d'activations (tuple)
-                            et les valeurs contiennent les points et matrices affines associées.
-        """
 
         # Capturer des activations intermédiaires
         layer_outputs = [layer.output for layer in self.model.layers]
@@ -170,23 +166,24 @@ class ReLUNetwork:
 
             zones_affines[pattern]["points"].append(point.flatten())
 
+
         # Calculer les matrices affines pour chaque zone
 
         weights_biases = [layer.get_weights() for layer in self.model.layers]
-
-
+        print(weights_biases)
         for pattern, _ in zones_affines.items():
+            # zone_constraints = {"weights": [], "biases": []}  # Inégalité positive ou négative
+            zone_constraints = {"weights": [], "biases": []}
 
-            zone_constraints = {"weights": [], "biases": []}  # Inégalité positive ou négative
-
-            W_combined = np.array(weights_biases[0][0] * np.array(pattern[0])).T # Cracra mais je n'ai pas eu le choix ??? A résoudre proprement
-            b_combined = np.array(weights_biases[0][1] * np.array(pattern[0])).T
+            W_combined = np.array(weights_biases[0][0]).T # Cracra mais je n'ai pas eu le choix ??? A résoudre proprement
+            b_combined = np.array(weights_biases[0][1]).T
 
             W_combined_act = np.array(weights_biases[0][0] * np.array(pattern[0])).T # Cracra mais je n'ai pas eu le choix ??? A résoudre proprement
             b_combined_act = np.array(weights_biases[0][1] * np.array(pattern[0])).T
 
             # Premiere étape de Zone_constraint séparée 
             for neuron_idx, is_active in enumerate(np.array(pattern[0])):
+
                 W_neuron = W_combined[neuron_idx, :]  # Poids associés au neurone
                 b_neuron = b_combined[neuron_idx]    # Biais du neurone
 
@@ -198,36 +195,30 @@ class ReLUNetwork:
                     zone_constraints["weights"].append(W_neuron)
                     zone_constraints["biases"].append(b_neuron)
 
-
-
             for i, (u, b) in enumerate(weights_biases[1:], start= 1): # i = 0 fait hors de la boucle
-                
+ 
                 active_neurons = np.array(pattern[i])  
-                
 
                 # Détermination des zones de contraintes
 
-                if i != len(weights_biases)-1: # la dernière couche n'est pas calculé par un ReLu donc on ne la considère pas
+                W_combined = np.dot(u.T, W_combined)
+                b_combined = np.dot(u.T, b_combined) + b
 
+                if i != len(weights_biases) -1: # la dernière couche (Linéaire, non ReLu) ne participe pas aux zones
                     for neuron_idx, is_active in enumerate(active_neurons):
 
                         # Récupérer les poids et biais du neurone
-                        W_neuron = u.T[neuron_idx, :]  # Poids associés au neurone
-                        b_neuron = b[neuron_idx]    # Biais du neurone
-
-                        # Transformer W_neuron et b_neuron dans l'espace d'entrée
-                        W_transformed = np.dot(W_neuron, W_combined)
-                        b_transformed = np.dot(W_neuron, b_combined) + b_neuron
+                        W_neuron = W_combined[neuron_idx, :] # Poids associés au neurone
+                        b_neuron = b_combined[neuron_idx]    # Biais du neurone
 
                         # Ajouter la contrainte dans l'espace d'entrée
+                        if is_active:  # Neurone activé : -W*x - b <= 0
+                            zone_constraints["weights"].append(-W_neuron)
+                            zone_constraints["biases"].append(-b_neuron)
 
-                    if is_active:  # Neurone activé : W*x + b > 0
-                        zone_constraints["weights"].append(-W_transformed)
-                        zone_constraints["biases"].append(-b_transformed)
-
-                    else:          # Neurone désactivé : -W*x - b >= 0
-                        zone_constraints["weights"].append(W_transformed)
-                        zone_constraints["biases"].append(b_transformed)
+                        else:          # Neurone désactivé : W*x + b <= 0
+                            zone_constraints["weights"].append(W_neuron)
+                            zone_constraints["biases"].append(b_neuron)
 
 
                 # Récupérer les poids et biais des neurones activés uniquement
@@ -239,17 +230,13 @@ class ReLUNetwork:
                 b_combined_act = np.dot(W_active, b_combined_act) + b_active
 
 
-                # Poids utilisés pour le calculs des zones de contrainte.
-                W_combined = np.dot(u.T, W_combined)
-                b_combined = np.dot(u.T, b_combined) + b
-
             # Enregistrer la matrice affine et la zone de contrainte 
             zones_affines[pattern]["matrix"] = (W_combined_act, b_combined_act)
 
 
             constraints[pattern] = zone_constraints
 
-        """
+        
         # Vérification de la fonction affine
         print("Vérification:")
         for _, data in (zones_affines.items()):
@@ -262,7 +249,7 @@ class ReLUNetwork:
         
 
         # print(constraints)
-
+        """
         # Vérification des zones affines
         print('Vérification')
         for pattern, data in (zones_affines.items()):
