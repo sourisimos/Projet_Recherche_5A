@@ -97,7 +97,7 @@ class MaillageDelaunayMultiDimension:
 
 
             z_min, z_max = z.min(), z.max()
-            intensity = 1 - (z - z_min) / (z_max - z_min)  # Entensité avec 0 et 1 comme optimum
+            intensity = (z - z_min) / (z_max - z_min)  # Entensité avec 0 et 1 comme optimum
 
             # Tracé
             fig.add_trace(go.Mesh3d(
@@ -119,7 +119,6 @@ class MaillageDelaunayMultiDimension:
                     orientation="v"
                 )
             ))
-
             return fig
 
 

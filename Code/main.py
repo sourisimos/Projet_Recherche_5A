@@ -15,10 +15,10 @@ input_dim = 2 # Dimension de l'entré
 output_dim = 1 # Dimension de la sorties
 
 point_delaunay = 10 # Nb de point à partir duquel on génère la fonction affine intiale 
-nb_pt_region = 2# Nombre de point tirés par régions dans la fonction affine intiale
+nb_pt_region = 150# Nombre de point tirés par régions dans la fonction affine intiale
 
-nb_couches_cachees = 2 # Nb de couches cachées dans le réseau
-largeur_couche = 5  # Nb de neurones par couche cachée
+nb_couches_cachees = 5 # Nb de couches cachées dans le réseau
+largeur_couche = 4  # Nb de neurones par couche cachée
 
 epochs = 100 # Nb d'époques pour l'entraînement du réseau
 
@@ -63,7 +63,7 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
         regions = mesh.regions
 
         model.plot_affine_zones(regions,grid_size, fig, follow_regions)
-        # mesh.plot(fig)
+        mesh.plot(fig)
         plot_affine_zones_with_meshgrid_3D(fig, zones_affines, constraints)
 
         params_text = (f"Input Dimension: {input_dim}   "
