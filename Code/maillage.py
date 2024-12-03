@@ -159,7 +159,6 @@ class MaillageDelaunayMultiDimension:
 
         retourne : None
         """
-
         if self.input_dim > 2 or self.output_dim != 1:
             print("La visualisation 3D est uniquement possible pour un maillage en entrée 2D "
                   "et des valeurs de sortie 1D !")
