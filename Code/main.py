@@ -2,7 +2,7 @@ import argparse
 from maillage import MaillageDelaunayMultiDimension
 from network import ReLUNetwork
 import plotly.graph_objects as go
-from tools import plot_affine_zones_with_meshgrid_3D
+from tools import plot_affine_zones_with_meshgrid_2D, plot_affine_zones_with_meshgrid_2D_border, plot_affine_zones_with_meshgrid_2D_border_neighbours
 import numpy as np
 
 """
@@ -15,14 +15,14 @@ input_dim = 2 # Dimension de l'entré
 output_dim = 1 # Dimension de la sorties
 
 point_delaunay = 10 # Nb de point à partir duquel on génère la fonction affine intiale 
-nb_pt_region = 150# Nombre de point tirés par régions dans la fonction affine intiale
+nb_pt_region = 50# Nombre de point tirés par régions dans la fonction affine intiale
 
-nb_couches_cachees = 5 # Nb de couches cachées dans le réseau
-largeur_couche = 4  # Nb de neurones par couche cachée
+nb_couches_cachees = 2 # Nb de couches cachées dans le réseau
+largeur_couche = 20 # Nb de neurones par couche cachée
 
-epochs = 100 # Nb d'époques pour l'entraînement du réseau
+epochs = 10 # Nb d'époques pour l'entraînement du réseau
 
-grid_size = 100 #Finessse de la grille lors de l'affichage des zones affines pour le reseau 
+grid_size = 100 # Finessse de la grille lors de l'affichage des zones affines pour le reseau 
 
 generate_cube = True # force à générer tout le cube 01 
 
@@ -40,7 +40,7 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
                                           input_dim,
                                           output_dim,
                                           generate_cube)
-    
+
     print("Il y a %i zones affines" % len(mesh.regions.simplices))
     model = ReLUNetwork(input_dim=input_dim,
                         output_dim=output_dim,
@@ -50,11 +50,11 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
     X_train, Y_train = mesh.generate_points_region(nb_pt_region)
 
     # Entrainement
-    model.train(X_train, Y_train, epochs=epochs, batch_size=32)
-
+    # train_loss, val_loss = model.train(X_train, Y_train, epochs=epochs, batch_size=32)
+    train_loss, val_loss = model.train_with_intervals(X_train, Y_train, epochs, batch_size=32)
     point = [0.5] * input_dim
     print("Différence entre les deux réseaux pour", point, ':', mesh.evaluate_function_at_point(point) - model.evaluate_point(point))
-    zones_affines, constraints = model.find_affine_zone(grid_points)
+    zones_affines, constraints, points_pattern = model.find_affine_zone(grid_points)
 
 
     # Affichage si 3D
@@ -62,10 +62,18 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
         fig = go.Figure()
         regions = mesh.regions
 
+        # Affichage de la fonciton en 3D du rzo
         model.plot_affine_zones(regions,grid_size, fig, follow_regions)
-        mesh.plot(fig)
-        plot_affine_zones_with_meshgrid_3D(fig, zones_affines, constraints)
 
+        # Affichage des zones en 2  D de la fonction objectif
+        mesh.plot_2D(fig)
+
+        # Affichage des zones en 2D du rzo
+        plot_affine_zones_with_meshgrid_2D_border(fig, zones_affines, constraints)
+        # plot_affine_zones_with_meshgrid_2D_border_neighbours(fig, points_pattern)
+
+        # Affichage de la fonction objectif en 3D 
+        mesh.plot_3D(fig)
         params_text = (f"Input Dimension: {input_dim}   "
                        f"Output Dimension: {output_dim}   "
                        f"Points Delaunay: {point_delaunay}<br>"
@@ -75,7 +83,10 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
                        f"Epochs: {epochs}   "
                        f"Grid Size: {grid_size}   "
                        f"Generate Cube: {generate_cube}   "
-                       f"Follow Regions: {follow_regions}"
+                       f"Follow Regions: {follow_regions}<br>  "
+                       f"Error train {train_loss}   "
+                       f"Val error {val_loss}<br>   "
+                       f"Nb zones {len(zones_affines)}"
                        )
 
         fig.add_annotation(x=1,  
@@ -98,6 +109,16 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
                         )
 
         fig.show()
+
+"""
+for layer in [5, 10]:
+    for width in [5,20,50]:
+            for ep in [10, 100, 1000]:
+                nb_couches_cachees = layer# Nb de couches cachées dans le réseau
+                largeur_couche = width # Nb de neurones par couche cachée
+                epochs = ep
+"""
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Script de génération de maillage et d'entraînement de réseau ReLU")
