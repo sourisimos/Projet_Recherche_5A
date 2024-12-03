@@ -19,7 +19,19 @@ class MaillageDelaunayMultiDimension:
 
         # Generating points
         centered_points = np.random.rand(num_points, input_dim)
-        
+        # FIXED :
+
+        centered_points = np.array([[0.1230874,  0.9919432 ],
+                                    [0.24929276, 0.42547969],
+                                    [0.15300704, 0.73085746],
+                                    [0.35825542, 0.28526748],
+                                    [0.93157156, 0.73225214],
+                                    [0.90939576, 0.08385462],
+                                    [0.46912737, 0.55427293],
+                                    [0.44001697, 0.88191464],
+                                    [0.6207378,  0.30761995],
+                                    [0.03693253, 0.23952164]])
+
         if generate_cube : 
             border = generate_hypercube_vertices(input_dim)
             self.points = np.concatenate((centered_points, border), axis=0)
@@ -28,12 +40,43 @@ class MaillageDelaunayMultiDimension:
         else:
             self.points = centered_points
             tot_num_points = num_points
+        
+        # Fonction plane
+        self.points = np.array([[0.0,0.0],[0.0,1.0],[1.0,0.0],[1.0, 1.0]])
+
+
+
+        # Fonction avec une cassure
+        # self.points =  np.array([[0.0,0.0],[0.0,1.0],[1.0,0.0],[1.0, 1.0], [0.0,0.5], [1.0, 0.5]])
 
         # Generating regions
         self.regions = Delaunay(self.points)
 
         # Génération des valeurs de sortie (dimension output_dim) pour chaque sommet
         self.values_at_vertices = np.random.rand(tot_num_points, output_dim)
+
+        # FIXED
+        self.values_at_vertices = np.array([[0.91233996],
+                                            [0.5314544 ],
+                                            [0.27726649],
+                                            [0.88542493], 
+                                            [0.99150616], 
+                                            [0.29222178], 
+                                            [0.0054213 ], 
+                                            [0.83149493], 
+                                            [0.74419698], 
+                                            [0.90944431], 
+                                            [0.12867826], 
+                                            [0.86673492], 
+                                            [0.72346853],
+                                            [0.11678231]])
+        
+        # self.values_at_vertices = (np.sum(self.points, axis=1)/2)**2
+        # self.values_at_vertices = np.exp(np.sum(self.points, axis=1)**2)/ 10
+
+        # self.values_at_vertices = self.values_at_vertices.reshape((tot_num_points,1))
+
+        self.values_at_vertices = np.array([[0.1],[0.1],[0.7],[0.7]])
 
     def evaluate_function_at_point(self, point, text_disp = False):
         """
