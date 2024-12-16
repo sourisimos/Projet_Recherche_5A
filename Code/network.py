@@ -1,7 +1,6 @@
 import numpy as np
 import tensorflow.keras as tfk # type: ignore
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.initializers import HeNormal, RandomNormal
 from tensorflow.keras.callbacks import ReduceLROnPlateau
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -9,14 +8,6 @@ from plotly.subplots import make_subplots
 from tools import plot_affine_zones_with_meshgrid_2D_border
 class ReLUNetwork:
     def __init__(self, input_dim=2, output_dim=1, hidden_layers=10, layer_width=50):
-        """
-        Initialise un réseau ReLU pour l'approximation de fonction.
-
-        input_dim : Dimension d'entrée du réseau (par exemple, 2 pour un pavage 2D).
-        output_dim : Dimension de sortie du réseau (par exemple, 1 pour des valeurs scalaires).
-        hidden_layers : Nombre de couches cachées.
-        layer_width : Nombre de neurones par couche cachée.
-        """
 
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -25,10 +16,6 @@ class ReLUNetwork:
         self.model = self._create_model()
 
     def _create_model(self):
-        """
-        Crée un réseau de neurones avec des couches ReLU.
-        retourne : le modèle initialisé (objet TF).
-        """
 
         # Création de l'architecture du modèle
         model = tfk.models.Sequential()
@@ -41,7 +28,6 @@ class ReLUNetwork:
                         self.layer_width,
                         activation="relu",
                         input_dim=self.input_dim,
-                        kernel_initializer=HeNormal(),
                     )
                 )
             else:
@@ -49,25 +35,18 @@ class ReLUNetwork:
                     tfk.layers.Dense(
                         self.layer_width,
                         activation="relu",
-                        kernel_initializer=HeNormal(),
                     )
                 )
-
-        # model.add(tfk.layers.BatchNormalization())
-        # model.add(tfk.layers.Dropout(0.3))  # Dropout 30%
 
         # Couche de sortie
         model.add(
             tfk.layers.Dense(
                 self.output_dim,
-                kernel_initializer=RandomNormal(
-                    mean=0.0, stddev=np.sqrt(1.0 / self.layer_width)
-                ),
             )
         )
 
         # Planification de l'apprentissage
-        initial_lr = 0.01
+        initial_lr = 1e-4
         optimizer = Adam(learning_rate=initial_lr)
 
         # Compilation du modèle
@@ -77,17 +56,7 @@ class ReLUNetwork:
 
 
     def train(self, X_train, y_train, epochs=50, batch_size=16):
-        """
-        Entraîne le modèle sur les données fournies.
 
-        X_train : Données d'entrée d'entraînement.
-        y_train : Valeurs cibles d'entraînement.
-        epochs : Nombre d'époques d'entraînement.
-        batch_size : Taille de lot pour l'entraînement.
-
-        retourne : NOne
-        """
-        # self.model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size)
         history = self.model.fit(
                 X_train, y_train,          # Données d'entraînement
                 epochs=epochs,                 # Nombre total d'époques
@@ -96,52 +65,38 @@ class ReLUNetwork:
                 verbose=1,                  # Affiche les détails d'entraînement
                 )
 
-
-
-        return history.history['loss'][-1], history.history['val_loss'][-1]
+        return history.history['loss'], history.history['val_loss']
     
-    def train_with_intervals(self, X_train, y_train, total_epochs=50, batch_size=32):
-        """
-        Entraîne le modèle par intervalles et affiche les zones affines après chaque segment.
 
-        Args:
-        - X_train : Données d'entrée d'entraînement.
-        - y_train : Valeurs cibles d'entraînement.
-        - total_epochs : Nombre total d'époques.
-        - batch_size : Taille des lots.
-        - grid_size : Taille de la grille pour afficher les zones affines.
-        - delaunay_regions : Optionnel, pour filtrer avec des régions Delaunay.
-        """
 
-        reduce_lr = ReduceLROnPlateau(
-        monitor='val_loss',  # Variable surveillée
-        factor=0.50,          # Facteur de réduction (par ex. divise par 2)
-        patience=5,          # Nombre d'époques sans amélioration avant réduction
-        min_lr=1e-6,         # Taux d'apprentissage minimum
-        verbose=1            # Affiche les changements
-    )
-        # Diviser les époques en 10 segments
-        epochs_per_interval = total_epochs // 10
+    def train_with_intervals(self, X_train, y_train, Nb_interval,total_epochs=50, batch_size=32):
+
+
+
+
+        # Diviser les époques en N segments
+        epochs_per_interval = total_epochs // N
 
         x = np.linspace(0, 1, 100)
         y = np.linspace(0, 1, 100)
         xx, yy = np.meshgrid(x, y)
         grid_points = np.c_[xx.ravel(), yy.ravel()]
 
+        nb_r = N//5
+
         fig = make_subplots(
-            rows=2, cols=5,
-            specs=[[{'type': 'scatter'}]*5]*2,  # Type de chaque subplot
-            subplot_titles=[f"Interval {i+1}" for i in range(50)],  # Titres des subplots
+            rows=nb_r, cols=5,
+            specs=[[{'type': 'scatter'}]*5]*nb_r,  # Type de chaque subplot
+            subplot_titles=[f"Interval {i+1}" for i in range(N)],  # Titres des subplots
         )
         fig.update_layout(
-            height=5000,  # Hauteur totale (ajuster pour des subplots carrés)
-            width=2000,    # Largeur totale
+            height=1000*nb_r,  # Hauteur totale (ajuster pour des subplots carrés)
+            width=5000,    # Largeur totale
             showlegend=False
         )
 
-        for interval in range(10):
-
-            print(f"=== Début de l'intervalle {interval + 1}/50 ===")
+        for interval in range(N):
+            print(f"=== Début de l'intervalle {interval + 1}/{N} ===")
 
             # Entraîner pour le segment actuel
             history = self.model.fit(
@@ -150,20 +105,23 @@ class ReLUNetwork:
                 batch_size=batch_size,
                 validation_split=0.2,
                 verbose=1,
-                initial_epoch=interval * epochs_per_interval,  # Reprend là où on s'est arrêté
-                callbacks = [reduce_lr]
+                initial_epoch=interval * epochs_per_interval,
             )
 
-            # Get inequalities 
+            # Obtenir les zones affines
             zones_affines, constraints, _ = self.find_affine_zone(grid_points)
             figa = go.Figure()
-            # plot affines zones
-            fig1 = plot_affine_zones_with_meshgrid_2D_border(figa, zones_affines, constraints, x_range=(0, 1), y_range=(0, 1), resolution=1000)
 
-            i = interval%5
-            j = interval//5
+            # Tracer les zones affines
+            fig1 = plot_affine_zones_with_meshgrid_2D_border(
+                figa, zones_affines, constraints, x_range=(0, 1), y_range=(0, 1), resolution=1000
+            )
+
+            # Calcul des indices de ligne et de colonne
+            i = interval // 5  # Ligne
+            j = interval % 5   # Colonne
+
             for trace in fig1:  # fig1.data contient toutes les traces
-                
                 if isinstance(trace, go.Scatter3d):  # Vérifiez si le tracé est 3D
                     # Convertir en Scatter (2D)
                     new_trace = go.Scatter(
@@ -171,30 +129,119 @@ class ReLUNetwork:
                         y=trace.y,
                         mode='lines',
                         line=dict(
-                                color='black',  # Couleur du contour
-                                width=1         # Épaisseur de la ligne
-                                )
-                                )
+                            color='black',  # Couleur du contour
+                            width=1         # Épaisseur de la ligne
+                        )
+                    )
                 else:
                     new_trace = trace
 
+                # Ajouter la trace au subplot
                 fig.add_trace(new_trace, row=i+1, col=j+1)
 
-                fig.layout.annotations[interval].text = f"Interval {interval + 1} - Zones: {len(zones_affines)}"
+            # Mettre à jour le titre du subplot
+            fig.layout.annotations[interval].text = f"Interval {interval + 1} - Zones: {len(zones_affines)}"
 
         fig.show()
-        print("=== Entraînement terminé ===")
-        return history.history['loss'][-1], history.history['val_loss'][-1]
+
+        return history.history['loss'], history.history['val_loss']
+
+
+
+    def train_start_end_zones(self, X_train, y_train, nb_epochs=300, batch_size=32):
+        """
+        Donne le nombre de zones en début et fin d'apprentissage 
+        Possibilité sur les points d'entrainement : X_train
+        possibilité sur tout lespace [0,1] avec un maillage: gridpoints
+        """
+        history = self.model.fit(
+            X_train, y_train,
+            epochs=1,
+            batch_size=batch_size,
+            validation_split=0.2,
+            verbose=1,
+            initial_epoch=0,
+        )
+        
+
+        nb_zones_affines_start = self.find_number_affines_zones(X_train)
+
+        history = self.model.fit(
+            X_train, y_train,
+            epochs=nb_epochs,
+            batch_size=batch_size,
+            validation_split=0.2,
+            verbose=1,
+            initial_epoch=1,
+        )
+
+        nb_zones_affines_end = self.find_number_affines_zones(X_train)
+
+        return nb_zones_affines_start, nb_zones_affines_end
+
+
+
+    def train_get_zones(self, X_train, y_train, nb_pt_epoch=50, batch_size=32):
+        """
+        Donne le nombre de zones au cours de l'apprentissage  
+        Possibilité sur les points d'entrainement : X_train
+        possibilité sur tout lespace [0,1] avec un maillage: gridpoints
+        """
+
+        # Calcul des époques cumulées
+        dif_epoch = np.array(range(1, nb_pt_epoch+1))  # Incréments de 1 à total_epochs
+        tot_cum_epoch = np.cumsum(dif_epoch)           # Époques cumulées
+        tot_epoch = tot_cum_epoch[-1]                  # Nombre total d'époques
+
+        print(f'Nombre total d\'époques: {tot_epoch}')
+
+
+        # Historique
+        hist_nb_zones_aff = []
+        hist_train_loss = []
+        hist_val_loss =[]
+
+        for ind in range(len(dif_epoch)):
+            print(f"=== Début de l'intervalle {ind+1}/{len(dif_epoch)} ===")
+            print(f"Entraînement sur {dif_epoch[ind]} époques (début à {tot_cum_epoch[ind]-dif_epoch[ind]}).")
+
+            # Entraîner pour l'intervalle actuel
+            history = self.model.fit(
+                X_train, y_train,
+                epochs=tot_cum_epoch[ind],  # Époque finale pour cet intervalle
+                batch_size=batch_size,
+                validation_split=0.2,
+                verbose=1,
+                initial_epoch=tot_cum_epoch[ind] - dif_epoch[ind],  # Époque de début
+            )
+
+            # Calcul du nombre de zones affines
+            nb_zones_affines = self.find_number_affines_zones(X_train)
+            print(f"Nombre de zones à l'époch {tot_cum_epoch[ind]}/{tot_epoch}: {nb_zones_affines}")
+            hist_nb_zones_aff.append(nb_zones_affines)
+
+            # Enregistrer la perte
+            hist_train_loss.append(history.history['loss'][-1])
+            hist_val_loss.append(history.history['val_loss'][-1])
+
+
+        # Générer les époques finales
+        hist_epoch = tot_cum_epoch
+
+        return (
+            hist_train_loss,        # Historique des pertes d'entraînement
+            hist_val_loss,          # Historique des pertes de validation
+            hist_nb_zones_aff,         # Historique des zones affines
+            hist_epoch              # Époques cumulées
+        )
+
 
 
     def evaluate_point(self, point):
         """
-        Évalue la valeur prédite par le réseau pour un point donné.
-
-        point : np.array ou liste de taille (input_dim,) - coordonnées du point à évaluer.
-
-        Retourne : La valeur prédite pour le point.
+        Evalue la valeur en 1 points du réseau
         """
+
         # Vérifier que le point est de la bonne dimension
         point = np.array(point).reshape(1, -1)  # Reformater en (1, input_dim) pour prédiction
 
@@ -208,21 +255,19 @@ class ReLUNetwork:
         return prediction[0]
 
     def plot_affine_zones(self, delaunay_regions, grid_size=1000, fig=None, follow_regions=False):
-        """
-        Génère les zones affines apprises par le réseaux à partir d'un grillage
 
-        delaunay_regions : Coordonnées des régions de base (scipy.spatial._qhull.Delaunay)
-        grid_size : subdivision de la grille 
-        ax : valeur d'ax (type :'mpl_toolkits.mplot3d.axes3d.Axes3D')
-
-        retourne: None
         """
+        Affiche la fonctoin générée par le réseaux 
+        """
+
 
         # Échantillonner l'espace en 2D
         x = np.linspace(0, 1, grid_size)
         y = np.linspace(0, 1, grid_size)
         X, Y = np.meshgrid(x, y)
+
         grid_points = np.c_[X.ravel(), Y.ravel()]
+
         if follow_regions:
         # Vérifier si chaque point est dans une région de Delaunay
             mask = np.array([delaunay_regions.find_simplex(point) != -1 for point in grid_points])
@@ -240,6 +285,7 @@ class ReLUNetwork:
         else : 
             Z = self.model.predict(grid_points)
             Z = Z.reshape(grid_size, grid_size)
+
         # Initialiser la figure et les axes si aucun axe n'est fourni
         if fig is None:
             fig = go.Figure()
@@ -263,7 +309,11 @@ class ReLUNetwork:
         return None
 
 
+
     def find_affine_zone(self, points):
+        """
+        Trouve les zones affines sur le cube 0,1 pour les points consiédéré : frontiere des régions, valeurs de la fonction affines dans les régiosn
+        """
 
 
         # Capturer des activations intermédiaires
@@ -379,7 +429,6 @@ class ReLUNetwork:
                 print("diff",rzo_pt-aff_pt)
         '''
 
-        # print(constraints)
         """
         # Vérification des zones affines
         print('Vérification')
@@ -395,3 +444,38 @@ class ReLUNetwork:
         """ 
 
         return zones_affines, constraints, points_pattern
+    
+
+
+    def find_number_affines_zones(self, points):
+        """
+        Calcul le nombre de zones affines pour les points considérés. 
+        """
+
+        # Capturer des activations intermédiaires
+        layer_outputs = [layer.output for layer in self.model.layers if not isinstance(layer, (tfk.layers.BatchNormalization, tfk.layers.Dropout))]
+        #layer_outputs = [layer.output for layer in self.model.layers]
+
+        # Créer une fonction pour capturer les activations 
+        activation_function = tfk.backend.function([self.model.input], layer_outputs)
+
+        
+        # Initialisation des dictionnaires
+        zones_affines = {}
+
+        # Récupération des zones d'activation par points
+        for point in points:
+            point = point.reshape(1, -1)  # Reformater en (1, input_dim)
+            activations = activation_function([point])
+            pattern = []
+
+            # Construire le patron d'activations binaire
+            for activation in activations: 
+                pattern.append((activation  != 0.).astype(int).flatten()) 
+            pattern = tuple(map(tuple, pattern))  # Conversion de la liste en tuple pour être la clé du dict
+            if pattern not in zones_affines:
+                zones_affines[pattern] = {"points": []}
+            zones_affines[pattern]["points"].append(point.flatten())
+        
+        nb_zones = len(zones_affines)
+        return nb_zones

@@ -1,7 +1,9 @@
 import itertools
 import numpy as np
-import numpy as np
 import plotly.graph_objects as go
+
+from scipy.spatial import ConvexHull
+
 
 def generate_hypercube_vertices(n):
 
@@ -50,7 +52,6 @@ def plot_affine_zones_with_meshgrid_2D(fig, zones_affines, constraints, x_range=
 
 
 
-from scipy.spatial import ConvexHull
 def plot_affine_zones_with_meshgrid_2D_border(fig, zones_affines, constraints, x_range=(0, 1), y_range=(0, 1), resolution=1000):
     if resolution < 1000:
         print('Attenion, une résolution inférieur à 1000 peut ne pas fonctionner !')
@@ -63,7 +64,7 @@ def plot_affine_zones_with_meshgrid_2D_border(fig, zones_affines, constraints, x
     c = 0  # Compteur de points dans les zones
     i = 0
     for i, (pattern, _) in enumerate(zones_affines.items()):
-        print(f'Génération de la zone {i}/{len(zones_affines)}')
+        print(f'Génération de la zone {i+1}/{len(zones_affines)}')
         w = np.array(constraints[pattern]['weights'])  # Poids
         b = np.array(constraints[pattern]['biases'])   # Biais
 
@@ -125,8 +126,6 @@ def plot_affine_zones_with_meshgrid_2D_border(fig, zones_affines, constraints, x
     return fig.data
 
 
-import numpy as np
-import plotly.graph_objects as go
 
 def plot_affine_zones_with_meshgrid_2D_border_neighbours(fig, points_pattern, x_range=(0, 1), y_range=(0, 1), resolution=100):
     border_points = []
@@ -188,13 +187,10 @@ def plot_affine_zones_with_meshgrid_2D_border_neighbours(fig, points_pattern, x_
     ))
     return fig
 
+
+
 def get_neighbors(point_index, grid_shape):
-    """
-    Retourne les indices des voisins directs d'un point dans la grille.
-    :param point_index: Index du point dans le tableau.
-    :param grid_shape: Forme de la grille (rows, cols).
-    :return: Liste des indices des voisins directs.
-    """
+
     rows, cols = grid_shape
     row, col = divmod(point_index, cols)  # Convertir l'index linéaire en indices matriciels
 
@@ -207,3 +203,25 @@ def get_neighbors(point_index, grid_shape):
             neighbors.append(n_row * cols + n_col)  # Convertir les indices matriciels en index linéaire
 
     return neighbors
+
+
+
+def plot_points_in_2D(X_train, fig):
+    x = X_train[:, 0]
+    y = X_train[:, 1]
+    z = np.zeros_like(x)
+
+    # Création de la figure
+    fig = go.Figure()
+
+    # Ajouter les points en rouge
+    fig.add_trace(go.Scatter3d(
+        x=x,
+        y=y,
+        z=z,
+        mode='markers',  # Affiche uniquement les marqueurs
+        marker=dict(color='red', size=5),  # Couleur et taille des marqueurs
+        name='X_train'  # Légende
+    )) 
+
+    return fig

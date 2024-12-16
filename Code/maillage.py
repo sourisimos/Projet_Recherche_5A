@@ -1,93 +1,28 @@
 import numpy as np
 from scipy.spatial import Delaunay
 import plotly.graph_objects as go
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-from tools import generate_hypercube_vertices
+
+from objective_functions import affine_f, random_f, fixed_f_2D, heaviside_f_2D
+
+
 
 class MaillageDelaunayMultiDimension:
-    def __init__(self, num_points=100, input_dim=2, output_dim=1, generate_cube = True):
-        """
-        Initialise un maillage Delaunay dans un espace de dimension arbitraire.
+    def __init__(self, num_points=10, input_dim=2, output_dim=1, generate_cube = True):
 
-        num_points : Nombre de points à générer pour le maillage
-        input_dim : Dimension de l'espace du maillage d'entrée (par exemple, 2 ou 3)
-        output_dim : Dimension de l'espace des valeurs interpolées de sortie
-        """
         self.input_dim = input_dim
         self.output_dim = output_dim
 
-        # Generating points
-        centered_points = np.random.rand(num_points, input_dim)
-        # FIXED :
+        # Get coords de la fonction objectif
+        # (self.points, self.values_at_vertices) = affine_f(2, 1, True)
+        (self.points, self.values_at_vertices) = heaviside_f_2D(4)
 
-        centered_points = np.array([[0.1230874,  0.9919432 ],
-                                    [0.24929276, 0.42547969],
-                                    [0.15300704, 0.73085746],
-                                    [0.35825542, 0.28526748],
-                                    [0.93157156, 0.73225214],
-                                    [0.90939576, 0.08385462],
-                                    [0.46912737, 0.55427293],
-                                    [0.44001697, 0.88191464],
-                                    [0.6207378,  0.30761995],
-                                    [0.03693253, 0.23952164]])
-
-        if generate_cube : 
-            border = generate_hypercube_vertices(input_dim)
-            self.points = np.concatenate((centered_points, border), axis=0)
-            tot_num_points = num_points + 2**(input_dim)
-
-        else:
-            self.points = centered_points
-            tot_num_points = num_points
-        
-        # Fonction plane
-        self.points = np.array([[0.0,0.0],[0.0,1.0],[1.0,0.0],[1.0, 1.0]])
-
-
-
-        # Fonction avec une cassure
-        # self.points =  np.array([[0.0,0.0],[0.0,1.0],[1.0,0.0],[1.0, 1.0], [0.0,0.5], [1.0, 0.5]])
 
         # Generating regions
         self.regions = Delaunay(self.points)
 
-        # Génération des valeurs de sortie (dimension output_dim) pour chaque sommet
-        self.values_at_vertices = np.random.rand(tot_num_points, output_dim)
-
-        # FIXED
-        self.values_at_vertices = np.array([[0.91233996],
-                                            [0.5314544 ],
-                                            [0.27726649],
-                                            [0.88542493], 
-                                            [0.99150616], 
-                                            [0.29222178], 
-                                            [0.0054213 ], 
-                                            [0.83149493], 
-                                            [0.74419698], 
-                                            [0.90944431], 
-                                            [0.12867826], 
-                                            [0.86673492], 
-                                            [0.72346853],
-                                            [0.11678231]])
-        
-        # self.values_at_vertices = (np.sum(self.points, axis=1)/2)**2
-        # self.values_at_vertices = np.exp(np.sum(self.points, axis=1)**2)/ 10
-
-        # self.values_at_vertices = self.values_at_vertices.reshape((tot_num_points,1))
-
-        self.values_at_vertices = np.array([[0.1],[0.1],[0.7],[0.7]])
 
     def evaluate_function_at_point(self, point, text_disp = False):
-        """
-        Évalue la fonction interpolée en un point donné.
-
-        point : np.array de taille (input_dim,) - coordonnées du point à évaluer.
-
-        Retourne : - un tableau numpy de dimension (output_dim) contenant la valeur
-                   interpolée de la fonction en ce point, ou None si en dehors du maillage.
-                   - rien si le point est hors du maillage 
-        """
 
         simplex = self.regions.find_simplex(point)
 
@@ -151,14 +86,7 @@ class MaillageDelaunayMultiDimension:
 
 
     def plot_3D(self, fig=None):
-        """
-        Affiche le maillage Delaunay et une des dimensions de la fonction interpolée en 3D,
-        si la dimension d'entrée est de 2 et la dimension de sortie est de 1.
 
-        fig : Figure Plotly à enrichir (par défaut, crée une nouvelle figure)
-
-        retourne : None
-        """
         if self.input_dim > 2 or self.output_dim != 1:
             print("La visualisation 3D est uniquement possible pour un maillage en entrée 2D "
                   "et des valeurs de sortie 1D !")
@@ -202,13 +130,6 @@ class MaillageDelaunayMultiDimension:
 
 
     def generate_points_region(self, n=1):
-        """
-        Génère un nombre spécifié de points aléatoires dans chaque région (simplexe).
-
-        num_points_per_region : nombre de points à générer dans chaque région.
-
-        Retourne : Deux arrays, l'un avec les coordonnées, l'autre avec la valeur en ce point.
-        """
 
         points_in_regions = []
         values_in_regions = []
