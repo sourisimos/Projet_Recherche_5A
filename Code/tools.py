@@ -211,16 +211,13 @@ def plot_points_in_2D(X_train, fig):
     y = X_train[:, 1]
     z = np.zeros_like(x)
 
-    # Création de la figure
-    fig = go.Figure()
-
     # Ajouter les points en rouge
     fig.add_trace(go.Scatter3d(
         x=x,
         y=y,
         z=z,
         mode='markers',  # Affiche uniquement les marqueurs
-        marker=dict(color='red', size=5),  # Couleur et taille des marqueurs
+        marker=dict(color='red', size=2),  # Couleur et taille des marqueurs
         name='X_train'  # Légende
     )) 
 
