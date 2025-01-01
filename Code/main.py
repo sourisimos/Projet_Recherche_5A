@@ -145,7 +145,7 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
         X_train, Y_train = mesh.generate_points_region(nb_pt_region)
 
         # Entrainement
-        hist_train_loss, hist_val_loss,  hist_nb_zones_aff, hist_epoch = model.train_get_zones(X_train, Y_train, nb_pt_epoch, batch_size=32)
+        hist_train_loss, hist_val_loss,  hist_nb_zones_aff, hist_epoch = model.train_adaptedçintervals(X_train, Y_train, nb_pt_epoch, batch_size=32)
         
         cumul_hist_nb_zones_aff.append(hist_nb_zones_aff)
 
@@ -236,7 +236,7 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
 
 
 
-    # Création du tracé pour train_get_zones
+    # Création du tracé pour train_adapted_intervals
     
 
     """
@@ -346,6 +346,20 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
                                      zaxis_title="Valeur de sortie (Z)",
                                      )   
                         )
+        fig.update_layout(
+            xaxis=dict(
+                title='Abscisse',                # Titre de l'axe X
+                titlefont=dict(size=20),         # Taille du titre de l'axe X
+                tickfont=dict(size=18)           # Taille des ticks de l'axe X
+            ),
+            yaxis=dict(
+                title='Ordonnée',                # Titre de l'axe Y
+                titlefont=dict(size=20),         # Taille du titre de l'axe Y
+                tickfont=dict(size=18)           # Taille des ticks de l'axe Y
+            ),
+            title='Exemple de graphique',
+            font=dict(size=15)                   # Taille générale de la police
+        )
 
         fig.show()
 

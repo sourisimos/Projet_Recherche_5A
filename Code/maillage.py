@@ -13,8 +13,14 @@ class MaillageDelaunayMultiDimension:
         self.input_dim = input_dim
         self.output_dim = output_dim
 
+        self.generate_cube = generate_cube
+
+
+        self.num_points = num_points
+
+
         # Get coords de la fonction objectif
-        # (self.points, self.values_at_vertices) = affine_f(2, 1, True)
+        # (self.points, self.values_at_vertices) = affine_f(self.input_dim, self.output_dim, fixed = True)
         (self.points, self.values_at_vertices) = heaviside_f_2D(4)
 
 

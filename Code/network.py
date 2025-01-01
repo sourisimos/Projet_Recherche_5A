@@ -59,7 +59,7 @@ class ReLUNetwork:
 
         history = self.model.fit(
                 X_train, y_train,          # Données d'entraînement
-                epochs=epochs,                 # Nombre total d'époques
+                epochs=epochs,                 # Nombre total d'époques 
                 batch_size=batch_size,             # Taille du batch
                 validation_split=0.2,      # Fraction des données utilisées pour la validation
                 verbose=1,                  # Affiche les détails d'entraînement
@@ -69,9 +69,7 @@ class ReLUNetwork:
     
 
 
-    def train_with_intervals(self, X_train, y_train, Nb_interval,total_epochs=50, batch_size=32):
-
-
+    def train_with_intervals(self, X_train, y_train, N,total_epochs=50, batch_size=32):
 
 
         # Diviser les époques en N segments
@@ -181,7 +179,7 @@ class ReLUNetwork:
 
 
 
-    def train_get_zones(self, X_train, y_train, nb_pt_epoch=50, batch_size=32):
+    def train_adapted_intervals(self, X_train, y_train, nb_pt_epoch=50, batch_size=32):
         """
         Donne le nombre de zones au cours de l'apprentissage  
         Possibilité sur les points d'entrainement : X_train
