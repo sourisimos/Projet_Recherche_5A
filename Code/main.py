@@ -2,7 +2,7 @@ import argparse
 from maillage import MaillageDelaunayMultiDimension
 from network import ReLUNetwork
 import plotly.graph_objects as go
-from tools import plot_affine_zones_with_meshgrid_2D, plot_affine_zones_with_meshgrid_2D_border, plot_affine_zones_with_meshgrid_2D_border_neighbours, plot_points_in_2D
+from tools import plot_affine_zones_with_meshgrid_2D, plot_affine_zones_with_meshgrid_2D_border_3D, plot_affine_zones_with_meshgrid_2D_border_neighbours, plot_points_in_2D_3D, plot_affine_zones_with_meshgrid_2D_border_2D, plot_points_in_2D_2D
 import numpy as np
 from datetime import datetime
 import matplotlib.pyplot as plt
@@ -16,13 +16,13 @@ input_dim = 2 # Dimension de l'entré
 output_dim = 1 # Dimension de la sorties
 
 point_delaunay = 10 # Nb de point à partir duquel on génère la fonction affine intiale 
-nb_pt_region = 500   # Nombre de point tirés par régions dans la fonction affine intiale
+nb_pt_region = 100   # Nombre de point tirés par régions dans la fonction affine intiale
 
 nb_couches_cachees = 2 # Nb de couches cachées dans le réseau
 largeur_couche = 10  # Nb de neurones par couche cachée
 
-epochs = 1000  # Nb d'époques pour l'entraînement du réseau
-nb_pt_epoch = 50 # Dans le cas ou on affiche des infos sur plusieurs epochs,
+epochs = 5050  # Nb d'époques pour l'entraînement du réseau
+nb_pt_epoch = 10 # Dans le cas ou on affiche des infos sur plusieurs epochs,
 grid_size = 100 # Finessse de la grille lors de l'affichage des zones affines pour le reseau 
 
 nb_intervals = 10 # Pour train_with_intervals, donne le nombre d'interval (FIXES) considérés.
@@ -125,8 +125,11 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
     print(f"Les résultats ont été enregistrés dans le fichier : {file_name}")
     """
     """
-    iterate = 1
+    iterate = 10
     cumul_hist_nb_zones_aff = []
+    cumul_hist_val_loss = []
+    cumul_hist_train_loss = []
+
 
     for i in range(iterate):
         print(f'Entrainement {i+1}/{iterate}')
@@ -145,11 +148,17 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
         X_train, Y_train = mesh.generate_points_region(nb_pt_region)
 
         # Entrainement
-        hist_train_loss, hist_val_loss,  hist_nb_zones_aff, hist_epoch = model.train_adaptedçintervals(X_train, Y_train, nb_pt_epoch, batch_size=32)
+        hist_train_loss, hist_val_loss,  hist_nb_zones_aff, hist_epoch = model.train_adapted_intervals(X_train, Y_train, nb_pt_epoch, batch_size=32)
         
         cumul_hist_nb_zones_aff.append(hist_nb_zones_aff)
+        cumul_hist_train_loss.append(hist_train_loss[-1])
+        cumul_hist_val_loss.append(hist_val_loss[-1])
 
-    cumul_hist_nb_zones_aff = np.array(cumul_hist_nb_zones_aff)  # Convertir en tableau NumPy
+
+    cumul_hist_nb_zones_aff = np.array(cumul_hist_nb_zones_aff)  # Convertir en tableau NumPy*
+    mean_train_loss = np.mean(cumul_hist_train_loss)
+    mean_val_loss = np.mean(cumul_hist_val_loss)
+
 
     # Calculer la moyenne et l'intervalle de confiance
     mean_curve = np.mean(cumul_hist_nb_zones_aff, axis=0)  # Moyenne sur les exécutions
@@ -192,14 +201,14 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
                     f"Generate Cube: {generate_cube}   "
                     f"Follow Regions: {follow_regions}<br>  "
                     f"Nb d'itération {iterate}   "
-                    f"Train loss  {hist_train_loss[-1]}   "
-                    f"Val loss  {hist_val_loss[-1]}   "
+                    f"Train loss  {mean_train_loss}   "
+                    f"Val loss  {mean_val_loss}   "
 
 
                     )
 
-    fig.add_annotation(x=1,  
-                        y=0,
+    fig.add_annotation(x=1.0,  
+                        y=-0.5,
                         text=params_text,
                         showarrow=False,
                         font=dict(size=12, color="black"),
@@ -215,27 +224,49 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
         title="Evolution du nombre zones affines par époques",
         xaxis_title="Époque",
         yaxis_title="Nombre de zones affines",
-        template="plotly_white"
+        template="plotly_white",
+        margin=dict(l=40, r=40, t=200, b=200) 
     )
 
-    fig.write_image(f"resultats_d{nb_couches_cachees}_w{largeur_couche}_pt{nb_pt_region}.png", width=1280, height=720)
+    fig.update_layout(
+    xaxis=dict(
+        title='Epochs',                # Titre de l'axe X
+        titlefont=dict(size=30),         # Taille du titre de l'axe X
+        tickfont=dict(size=26)           # Taille des ticks de l'axe X
+    ),
+    yaxis=dict(
+        title='Zones affines',                # Titre de l'axe Y
+        titlefont=dict(size=30),         # Taille du titre de l'axe Y
+        tickfont=dict(size=26)           # Taille des ticks de l'axe Y
+    ),
+    title='Évolution du nombre de zones affines par époque',
+    font=dict(size=23))  
 
+    fig.show()
     """
-    hist_train_loss, hist_val_loss = model.train(X_train, Y_train, epochs=epochs, batch_size=32)
-    zones_affines, constraints, points_pattern = model.find_affine_zone(X_train)
+
+    # fig.write_image(f"cosine_d{nb_couches_cachees}_w{largeur_couche}_pt{nb_pt_region}.png", width=1280, height=720)
+
+    
+    # hist_train_loss, hist_val_loss = model.train(X_train, Y_train, epochs=epochs, batch_size=64)
+    # zones_affines, constraints, points_pattern = model.find_affine_zone(grid_points)
 
 
     # hist_train_loss, hist_val_loss = model.train_with_intervals(X_train, Y_train, nb_intervals, epochs, batch_size=32)
 
+    # hist_train_loss,hist_val_loss,hist_nb_zones_aff,hist_epoch = model.train_adapted_intervals(X_train,Y_train,nb_pt_epoch)
+    fig_init = go.Figure()
+    mesh.plot_2D_2D(fig_init)
+    plot_points_in_2D_2D(X_train, fig_init)
 
-
+    model.train_adapted_intervals_animated(X_train,Y_train, fig_init)
 
 
     # point = [0.5] * input_dim
     # print("Différence entre les deux réseaux pour", point, ':', mesh.evaluate_function_at_point(point) - model.evaluate_point(point))
 
 
-
+    
     # Création du tracé pour train_adapted_intervals
     
 
@@ -244,7 +275,7 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
 
     fig_plot.add_trace(go.Scatter(
         x=hist_epoch,                # Axe des x : époques
-        y=hist_zones_aff,            # Axe des y : zones affines
+        y=hist_nb_zones_aff,            # Axe des y : zones affines
         mode='lines+markers',        # Ligne et marqueurs
         name='Zones Affines',        # Légende du tracé
         line=dict(width=2),           # Style de la ligne
@@ -276,7 +307,7 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
                         bordercolor="black",
                         xref="paper",  # Référence à l'espace papier
                         yref="paper"
-                        )
+                         )
 
     # Ajout des titres et des étiquettes
     fig_plot.update_layout(
@@ -288,31 +319,55 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
 
     # Affichage
     fig_plot.show()
-    
     """
-
+    
+    
     # Affichage si 3D
     
     if input_dim == 2 and output_dim == 1: 
-        fig = go.Figure()
+        fig1 = go.Figure()
+        fig2 = go.Figure()
         regions = mesh.regions
 
-        # Affichage de la fonciton en 3D du rzo
-        # model.plot_affine_zones(regions,grid_size, fig, follow_regions)
+
 
         # Affichage des zones en 2  D de la fonction objectif
-        mesh.plot_2D(fig)
+        # mesh.plot_2D_3D(fig2)
 
         # Affichage des zones en 2D du rzo
-        plot_affine_zones_with_meshgrid_2D_border(fig, zones_affines, constraints)
+        # plot_affine_zones_with_meshgrid_2D_border_3D(fig2, zones_affines, constraints)
         # plot_affine_zones_with_meshgrid_2D_border_neighbours(fig, points_pattern)
 
 
         # Affichage des points de X_train s
-        plot_points_in_2D(X_train, fig)
+        # plot_points_in_2D_3D(X_train, fig2)
+
+
+        
+        # AFFICHAGE EN 2D 
+
+        
+        # Affichage des zones en 2  D de la fonction objectif
+        mesh.plot_2D_2D(fig2)
+
+        # Affichage des zones en 2D du rzo
+        plot_affine_zones_with_meshgrid_2D_border_2D(fig2, zones_affines, constraints)
+        # plot_affine_zones_with_meshgrid_2D_border_neighbours(fig2, points_pattern)
+
+
+        # Affichage des points de X_train s
+        plot_points_in_2D_2D(X_train, fig2)
+
+
+
+
+        # Affichage de la fonciton en 3D du rzo
+        model.plot_affine_zones(regions,grid_size, fig1, follow_regions)
 
         # Affichage de la fonction objectif en 3D 
-        # mesh.plot_3D(fig)
+        mesh.plot_3D(fig1)
+
+
         params_text = (f"Input Dimension: {input_dim}   "
                        f"Output Dimension: {output_dim}   "
                        f"Points Delaunay: {point_delaunay}<br>"
@@ -328,7 +383,7 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
                        f"Nb zones {len(zones_affines)}"
                        )
 
-        fig.add_annotation(x=1,  
+        fig1.add_annotation(x=1,  
                            y=0,
                            text=params_text,
                            showarrow=False,
@@ -339,30 +394,60 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
                            xref="paper",  # Référence à l'espace papier
                            yref="paper"
                            )
-
-        fig.update_layout(title="Zones Affines et Valeurs de Sortie du Réseau de Neurones ReLU en 3D",
-                          scene=dict(xaxis_title="X",
-                                     yaxis_title="Y",
-                                     zaxis_title="Valeur de sortie (Z)",
-                                     )   
-                        )
-        fig.update_layout(
+        
+        fig2.add_annotation(x=1,  
+                           y=0,
+                           text=params_text,
+                           showarrow=False,
+                           font=dict(size=12, color="black"),
+                           align="left",
+                           bgcolor="rgba(255, 255, 255, 0.8)",
+                           bordercolor="black",
+                           xref="paper",  # Référence à l'espace papier
+                           yref="paper"
+                           )
+        
+        
+        fig1.update_layout(
             xaxis=dict(
-                title='Abscisse',                # Titre de l'axe X
-                titlefont=dict(size=20),         # Taille du titre de l'axe X
-                tickfont=dict(size=18)           # Taille des ticks de l'axe X
+                title='X',                # Titre de l'axe X
+                titlefont=dict(size=30),         # Taille du titre de l'axe X
+                tickfont=dict(size=26)           # Taille des ticks de l'axe X
             ),
             yaxis=dict(
-                title='Ordonnée',                # Titre de l'axe Y
-                titlefont=dict(size=20),         # Taille du titre de l'axe Y
-                tickfont=dict(size=18)           # Taille des ticks de l'axe Y
+                title='Y',                # Titre de l'axe Y
+                titlefont=dict(size=30),         # Taille du titre de l'axe Y
+                tickfont=dict(size=26)           # Taille des ticks de l'axe Y
             ),
-            title='Exemple de graphique',
-            font=dict(size=15)                   # Taille générale de la police
+
+            title='Fonctions objectif et générée par le réseau',
+            font=dict(size=17),                   # Taille générale de la police
+
         )
 
-        fig.show()
 
+        fig2.update_layout(
+            xaxis=dict(
+                title='X',                # Titre de l'axe X
+                titlefont=dict(size=30),         # Taille du titre de l'axe X
+                tickfont=dict(size=22)           # Taille des ticks de l'axe X
+            ),
+            yaxis=dict(
+                title='Y',                # Titre de l'axe Y
+                titlefont=dict(size=30),         # Taille du titre de l'axe Y
+                tickfont=dict(size=22)           # Taille des ticks de l'axe Y
+            ),
+
+
+            title='Zones affines objectif et générée par le réseau',
+            font=dict(size=17),                   # Taille générale de la police
+
+        )
+
+        fig1.show()
+
+        fig2.show()
+    
     
 
 if __name__ == "__main__":

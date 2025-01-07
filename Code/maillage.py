@@ -3,7 +3,7 @@ from scipy.spatial import Delaunay
 import plotly.graph_objects as go
 
 
-from objective_functions import affine_f, random_f, fixed_f_2D, heaviside_f_2D
+from objective_functions import affine_f, random_f, fixed_f_2D, heaviside_f_2D, cosine_f_2D
 
 
 
@@ -22,6 +22,7 @@ class MaillageDelaunayMultiDimension:
         # Get coords de la fonction objectif
         # (self.points, self.values_at_vertices) = affine_f(self.input_dim, self.output_dim, fixed = True)
         (self.points, self.values_at_vertices) = heaviside_f_2D(4)
+        # (self.points, self.values_at_vertices) = cosine_f_2D()
 
 
         # Generating regions
@@ -54,7 +55,7 @@ class MaillageDelaunayMultiDimension:
 
             return None
 
-    def plot_2D(self, fig=None):
+    def plot_2D_3D(self, fig=None):
         if self.input_dim > 2 or self.output_dim != 1:
             print("La visualisation 3D est uniquement possible pour un maillage en entrée 2D "
                   "et des valeurs de sortie 1D !")
@@ -80,6 +81,41 @@ class MaillageDelaunayMultiDimension:
                     x=[x[edge[0]], x[edge[1]]],
                     y=[y[edge[0]], y[edge[1]]],
                     z=[0, 0],  # Fixer z=0 pour la projection
+                    mode='lines',
+                    line=dict(
+                        color='red',
+                        width=5
+                    ),
+                    showlegend=False,
+                ))
+
+        return fig
+    
+    def plot_2D_2D(self, fig=None):
+        if self.input_dim > 2 or self.output_dim != 1:
+            print("La visualisation 3D est uniquement possible pour un maillage en entrée 2D "
+                  "et des valeurs de sortie 1D !")
+
+        else:
+            if fig is None:
+                fig = go.Figure()
+
+            x = self.points[:, 0]
+            y = self.points[:, 1]
+            
+            edges = set()
+            for simplex in self.regions.simplices:
+                edges.update([
+                    (simplex[0], simplex[1]),
+                    (simplex[1], simplex[2]),
+                    (simplex[2], simplex[0])
+                ])
+
+            # Tracé des arêtes sur le plan z=0
+            for edge in edges:
+                fig.add_trace(go.Scatter(
+                    x=[x[edge[0]], x[edge[1]]],
+                    y=[y[edge[0]], y[edge[1]]],
                     mode='lines',
                     line=dict(
                         color='red',
