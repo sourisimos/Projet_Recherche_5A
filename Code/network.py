@@ -5,7 +5,7 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from tools import plot_affine_zones_with_meshgrid_2D_border
+from tools import plot_affine_zones_with_meshgrid_2D_border_2D
 class ReLUNetwork:
     def __init__(self, input_dim=2, output_dim=1, hidden_layers=10, layer_width=50):
 
@@ -55,7 +55,7 @@ class ReLUNetwork:
         return model
 
 
-    def train(self, X_train, y_train, epochs=50, batch_size=16):
+    def train(self, X_train, y_train, epochs=50, batch_size=64):
 
         history = self.model.fit(
                 X_train, y_train,          # Données d'entraînement
@@ -69,7 +69,7 @@ class ReLUNetwork:
     
 
 
-    def train_with_intervals(self, X_train, y_train, N,total_epochs=50, batch_size=32):
+    def train_with_intervals(self, X_train, y_train, N,total_epochs=    50, batch_size=32):
 
 
         # Diviser les époques en N segments
@@ -111,7 +111,7 @@ class ReLUNetwork:
             figa = go.Figure()
 
             # Tracer les zones affines
-            fig1 = plot_affine_zones_with_meshgrid_2D_border(
+            fig1 = plot_affine_zones_with_meshgrid_2D_border_2D(
                 figa, zones_affines, constraints, x_range=(0, 1), y_range=(0, 1), resolution=1000
             )
 
@@ -146,7 +146,7 @@ class ReLUNetwork:
 
 
 
-    def train_start_end_zones(self, X_train, y_train, nb_epochs=300, batch_size=32):
+    def train_start_end_zones(self, X_train, y_train, nb_epochs=300, batch_size=64):
         """
         Donne le nombre de zones en début et fin d'apprentissage 
         Possibilité sur les points d'entrainement : X_train
@@ -179,7 +179,7 @@ class ReLUNetwork:
 
 
 
-    def train_adapted_intervals(self, X_train, y_train, nb_pt_epoch=50, batch_size=32):
+    def train_adapted_intervals(self, X_train, y_train, nb_pt_epoch=50, batch_size=64):
         """
         Donne le nombre de zones au cours de l'apprentissage  
         Possibilité sur les points d'entrainement : X_train
@@ -232,7 +232,186 @@ class ReLUNetwork:
             hist_nb_zones_aff,         # Historique des zones affines
             hist_epoch              # Époques cumulées
         )
+        
+    def train_adapted_intervals_v2(self, X_train, y_train, fig_init, batch_size=64):
+        """
+        Donne le nombre de zones au cours de l'apprentissage  
+        Possibilité sur les points d'entrainement : X_train
+        possibilité sur tout lespace [0,1] avec un maillage: gridpoints
+        """
 
+        # Calcul des époques cumulées
+        tot_cum_epoch = np.array([0]+[int((i/2)**(5)) for i in range(2,12)])        # Époques cumulées
+
+        print(f'Nombre total d\'époques: {tot_cum_epoch[-1]}')
+
+
+        x = np.linspace(0, 1, 100)
+        y = np.linspace(0, 1, 100)
+        xx, yy = np.meshgrid(x, y)
+        grid_points = np.c_[xx.ravel(), yy.ravel()]
+
+
+        fig = make_subplots(
+            rows=5, cols=2,
+            specs=[[{'type': 'scatter'}]*2]*5,  # Type de chaque subplot
+            subplot_titles=[f"Interval {i+1}" for i in range(10)],  # Titres des subplots
+        )
+        fig.update_layout(
+            height=1000*5,  # Hauteur totale (ajuster pour des subplots carrés)
+            width=2000,    # Largeur totale
+            showlegend=False
+        )
+        hist_train_loss =[]
+        hist_val_loss = []
+        for ind in range(1,len(tot_cum_epoch)):
+            print(f"=== Début de l'intervalle {ind}/{len(tot_cum_epoch)-1} ===")
+            print(f"Début à {tot_cum_epoch[ind-1]}")
+
+            # Entraîner pour l'intervalle actuel
+            history = self.model.fit(
+                X_train, y_train,
+                epochs=tot_cum_epoch[ind],  # Époque finale pour cet intervalle
+                batch_size=batch_size,
+                validation_split=0.2,
+                verbose=1,
+                initial_epoch=tot_cum_epoch[ind-1],  # Époque de début
+            )
+
+            # Calcul du nombre de zones affines
+            # Obtenir les zones affines
+            zones_affines, constraints, _ = self.find_affine_zone(grid_points)
+            figa = go.Figure(fig_init.to_dict())
+
+            # Tracer les zones affines
+            fig1 = plot_affine_zones_with_meshgrid_2D_border_2D(
+                figa, zones_affines, constraints, x_range=(0, 1), y_range=(0, 1), resolution=1000
+            )
+
+            i = (ind - 1) // 2  # Ligne
+            j = (ind - 1) % 2   # Colonne
+
+            for trace in fig1:  # fig1.data contient toutes les traces
+
+                # Ajouter la trace au subplot
+                fig.add_trace(trace, row=i+1, col=j+1)
+
+            # Mettre à jour le titre du subplot
+            fig.layout.annotations[ind -1].text = f"Epoch {tot_cum_epoch[ind]} - Zones: {len(zones_affines)}"
+            hist_train_loss.append(history.history['loss'][-1])
+            hist_val_loss.append(history.history['val_loss'][-1])
+
+        fig.show()
+
+        return hist_train_loss, hist_val_loss
+
+
+    
+
+    def train_adapted_intervals_animated(self, X_train, y_train, fig_init, batch_size=64):
+        """
+        Visualise les zones affines et l'évolution de la loss au cours de l'entraînement.
+        Donne également l'évolution du nombre de zones affines détectées.
+        """
+
+        # Calcul des époques cumulées
+        tot_cum_epoch = np.array([0] + [int(i * 10) for i in range(0, 505)])  # Époques cumulées
+        print(f"Nombre total d'époques: {tot_cum_epoch[-1]}")
+
+        # Maillage de points pour les zones affines
+        x = np.linspace(0, 1, 100)
+        y = np.linspace(0, 1, 100)
+        xx, yy = np.meshgrid(x, y)
+        grid_points = np.c_[xx.ravel(), yy.ravel()]
+
+        # Historique des métriques
+        hist_train_loss = []
+        hist_val_loss = []
+        hist_nb_aff_zones = []
+
+        for ind in range(1, len(tot_cum_epoch)):
+            print(f"=== Début de l'intervalle {ind}/{len(tot_cum_epoch)-1} ===")
+            print(f"Début à {tot_cum_epoch[ind-1]}")
+
+            # Entraîner pour l'intervalle actuel
+            history = self.model.fit(
+                X_train, y_train,
+                epochs=tot_cum_epoch[ind] + 1,  # Époque finale pour cet intervalle
+                batch_size=batch_size,
+                validation_split=0.2,
+                verbose=1,
+                initial_epoch=tot_cum_epoch[ind-1],  # Époque de début
+            )
+
+            # Vérifier et enregistrer les pertes
+            if 'loss' in history.history:
+                hist_train_loss.append(history.history['loss'][-1])
+            else:
+                print(f"Clé 'loss' manquante dans history.history à l'itération {ind}.")
+                hist_train_loss.append(None)
+
+            if 'val_loss' in history.history:
+                hist_val_loss.append(history.history['val_loss'][-1])
+            else:
+                print(f"Clé 'val_loss' manquante dans history.history à l'itération {ind}.")
+                hist_val_loss.append(None)
+
+            # Calcul du nombre de zones affines
+            zones_affines, constraints, _ = self.find_affine_zone(grid_points)
+            nb_zones_affines = self.find_number_affines_zones(X_train)
+            hist_nb_aff_zones.append(nb_zones_affines)            # Création des subplots
+            fig_sub = make_subplots(
+                rows=1, cols=3,
+                specs=[[{'type': 'scatter'}] * 3],
+                subplot_titles=[
+                    "Zones Affines",
+                    "Fonction train loss",
+                    "Évolution nb zones affines"
+                ]
+            )
+            # Mise à jour des polices des titres des subplots
+            for annotation in fig_sub['layout']['annotations']:
+                annotation['font'] = dict(size=40)
+
+            fig_sub.update_layout(
+                width=3600,  # Largeur totale de la figure
+                height=1200,  # Hauteur totale de la figure
+                font=dict(size=40)  # Taille de police
+            )
+
+            # Tracer les zones affines
+            figa = go.Figure(fig_init.to_dict())
+            plot_affine_zones_with_meshgrid_2D_border_2D(
+                figa, zones_affines, constraints, x_range=(0, 1), y_range=(0, 1), resolution=1000
+            )
+            for trace in figa.data:
+                fig_sub.add_trace(trace, row=1, col=1)
+
+            fig_sub.update_xaxes(title="X", row=1, col=1)
+            fig_sub.update_yaxes(title="Y", row=1, col=1)
+
+            # Tracer la loss
+            fig_sub.add_trace(
+                go.Scatter(x=tot_cum_epoch[:ind], y=hist_train_loss, mode='lines+markers',line=dict(width=4, color='blue'),name='Train Loss'),
+                row=1, col=2
+            )
+            fig_sub.update_xaxes(title="Époque", range=[0, tot_cum_epoch[-1]], row=1, col=2)
+            fig_sub.update_yaxes(title="Loss", range=[-5,np.log(hist_train_loss[0]*1.5)] if hist_train_loss else 1, type= 'log', row=1, col=2)
+
+            # Tracer l'évolution du nombre de zones affines
+            fig_sub.add_trace(
+                go.Scatter(x=tot_cum_epoch[:ind], y=hist_nb_aff_zones, mode='lines+markers', line=dict(width=4, color='orange'), name='Nb Zones Affines',),
+                row=1, col=3
+            )
+            fig_sub.update_xaxes(title="Époque", range=[0, tot_cum_epoch[-1]], row=1, col=3)
+            fig_sub.update_yaxes(title="Nb Zones Affines (X_train)", range=[0, 70], row=1, col=3)
+
+            # Enregistrer la figure sous forme d'image
+            fig_sub.write_image(f"film_heavyside_d10_w10_pt100_{ind}.png")
+
+        return hist_train_loss, hist_val_loss, hist_nb_aff_zones
+
+            
 
 
     def evaluate_point(self, point):
