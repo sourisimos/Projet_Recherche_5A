@@ -122,3 +122,19 @@ def heaviside_f_2D(steep= 2):
 
 
     return np.array(points), np.array(values_at_vertices)
+
+
+def cosine_f_2D(precisionx=10, previsiony=2):
+    """
+    divide space into a precisionx * precisiony space 
+    """
+
+    x_abs, y_abs = np.linspace(0, 1, precisionx), np.linspace(0, 1, previsiony)
+    X, Y = np.meshgrid(x_abs, y_abs)
+    Z = np.cos(X * 3 * np.pi) / 4 + 0.5
+
+    points = np.column_stack((X.ravel(), Y.ravel()))
+    values_at_vertices = np.reshape(Z, [-1,1])
+
+    return points, values_at_vertices
+
