@@ -258,8 +258,11 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
     fig_init = go.Figure()
     mesh.plot_2D_2D(fig_init)
     plot_points_in_2D_2D(X_train, fig_init)
+    model.train_adapted_intervals_v2(X_train, Y_train, fig_init)
+    
+    # title=f'd{nb_couches_cachees}_w{largeur_couche}'
 
-    model.train_adapted_intervals_animated(X_train,Y_train, fig_init)
+    # model.train_adapted_intervals_animated(X_train,Y_train, fig_init, title)
 
 
     # point = [0.5] * input_dim
@@ -321,7 +324,7 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
     fig_plot.show()
     """
     
-    
+    """
     # Affichage si 3D
     
     if input_dim == 2 and output_dim == 1: 
@@ -447,7 +450,7 @@ def main(input_dim, output_dim, point_delaunay, nb_pt_region, nb_couches_cachees
         fig1.show()
 
         fig2.show()
-    
+        """
     
 
 if __name__ == "__main__":

@@ -308,7 +308,7 @@ class ReLUNetwork:
 
     
 
-    def train_adapted_intervals_animated(self, X_train, y_train, fig_init, batch_size=64):
+    def train_adapted_intervals_animated(self, X_train, y_train, fig_init, title, batch_size=64):
         """
         Visualise les zones affines et l'évolution de la loss au cours de l'entraînement.
         Donne également l'évolution du nombre de zones affines détectées.
@@ -407,7 +407,7 @@ class ReLUNetwork:
             fig_sub.update_yaxes(title="Nb Zones Affines (X_train)", range=[0, 70], row=1, col=3)
 
             # Enregistrer la figure sous forme d'image
-            fig_sub.write_image(f"film_heavyside_d10_w10_pt100_{ind}.png")
+            fig_sub.write_image(f"film_heavyside_{title}_pt100_{ind}.png")
 
         return hist_train_loss, hist_val_loss, hist_nb_aff_zones
 
